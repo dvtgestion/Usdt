@@ -1,0 +1,2412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle Financeiro - Comprovantes, Extrato & USDT</title>
+  <style>
+    :root{
+      --bg:#0b1220; --text:#e9eefc; --muted:#a8b4d6; --line:rgba(255,255,255,.10);
+      --accent:#7aa2ff; --ok:#36d399; --warn:#fbbf24; --bad:#fb7185;
+      --shadow: 0 12px 30px rgba(0,0,0,.35); --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(122,162,255,.20), transparent 60%),
+                  radial-gradient(900px 600px at 100% 30%, rgba(54,211,153,.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      font-family: var(--sans);
+    }
+    .wrap{ max-width: 1200px; margin: 0 auto; padding: 22px 16px 40px; }
+    header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom: 14px; }
+    .title{ display:flex; flex-direction:column; gap:6px; }
+    h1{ margin:0; font-size: 20px; letter-spacing:.2px; font-weight: 720; }
+    .subtitle{ color:var(--muted); font-size: 13px; line-height:1.35; max-width: 980px; }
+    .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .tabBtn{
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tabBtn.active{ background: rgba(122,162,255,.22); border-color: rgba(122,162,255,.40); }
+
+    .grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap:14px; align-items:start; }
+    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } header{ flex-direction:column; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      display:flex; align-items:center; justify-content:space-between; padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+      gap: 10px;
+    }
+    .card .hd h2{ margin:0; font-size: 14px; letter-spacing:.25px; font-weight: 720; }
+    .card .bd{ padding: 14px; }
+
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 10px; }
+    .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom: 10px; }
+    @media (max-width: 640px){ .row, .row3{ grid-template-columns: 1fr; } }
+
+    label{ display:flex; flex-direction:column; gap:6px; font-size: 12px; color: var(--muted); }
+    input, textarea, select{
+      width:100%; padding: 10px 10px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(9,14,26,.7);
+      color: var(--text);
+      outline:none;
+      font-family: var(--sans);
+      font-size: 14px;
+    }
+    textarea{ min-height: 82px; resize: vertical; }
+    input:focus, textarea:focus, select:focus{
+      border-color: rgba(122,162,255,.55);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.16);
+    }
+
+    .actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; margin-top: 12px; }
+    button{
+      border:0; cursor:pointer; border-radius: 10px; padding: 10px 12px;
+      font-weight: 650; font-size: 13px; color: var(--text);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    button:hover{ background: rgba(255,255,255,.12); }
+    .btn-primary{ background: rgba(122,162,255,.22); border-color: rgba(122,162,255,.40); }
+    .btn-primary:hover{ background: rgba(122,162,255,.30); }
+    .btn-danger{ background: rgba(251,113,133,.18); border-color: rgba(251,113,133,.40); }
+    .btn-danger:hover{ background: rgba(251,113,133,.24); }
+    .btn-ok{ background: rgba(54,211,153,.18); border-color: rgba(54,211,153,.40); }
+    .btn-ok:hover{ background: rgba(54,211,153,.24); }
+
+    .toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .toolbar .left, .toolbar .right{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px; padding: 7px 10px;
+      border-radius: 999px; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--muted); font-size: 12px; white-space:nowrap;
+    }
+    .dot{ width:8px; height:8px; border-radius:999px; background: var(--accent); box-shadow: 0 0 0 3px rgba(122,162,255,.14); }
+    .dot.bad{ background: var(--bad); box-shadow: 0 0 0 3px rgba(251,113,133,.14); }
+    .dot.warn{ background: var(--warn); box-shadow: 0 0 0 3px rgba(251,191,36,.14); }
+    .dot.ok{ background: var(--ok); box-shadow: 0 0 0 3px rgba(54,211,153,.14); }
+
+    .tableWrap{ overflow:auto; border-radius: 12px; border: 1px solid rgba(255,255,255,.10); background: rgba(8,12,22,.55); }
+    table{ width:100%; border-collapse:collapse; min-width: 1180px; }
+    th, td{ padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,.08); vertical-align:top; font-size: 13px; color: var(--text); }
+    th{
+      position: sticky; top:0; background: rgba(10,16,30,.92);
+      backdrop-filter: blur(8px); text-align:left;
+      font-size: 12px; color: var(--muted); letter-spacing:.2px; z-index: 2;
+    }
+    tr:hover td{ background: rgba(255,255,255,.03); }
+
+    .mono{ font-family: var(--mono); }
+    .muted{ color: var(--muted); }
+    .small{ font-size: 12px; }
+    .nowrap{ white-space:nowrap; }
+
+    .chip{
+      display:inline-flex; align-items:center; gap:6px; padding: 6px 10px;
+      border-radius: 999px; background: rgba(122,162,255,.14);
+      border: 1px solid rgba(122,162,255,.28);
+      color: var(--text); font-size: 12px; white-space:nowrap;
+    }
+    .chip.exact{ background: rgba(251,113,133,.14); border-color: rgba(251,113,133,.38); }
+    .chip.possible{ background: rgba(251,191,36,.14); border-color: rgba(251,191,36,.35); }
+    .chip.matchStrong{ background: rgba(54,211,153,.14); border-color: rgba(54,211,153,.35); }
+    .chip.matchWeak{ background: rgba(251,191,36,.14); border-color: rgba(251,191,36,.35); }
+    .chip.noMatch{ background: rgba(251,113,133,.14); border-color: rgba(251,113,133,.35); }
+    .chip.linked{ background: rgba(122,162,255,.18); border-color: rgba(122,162,255,.40); }
+
+    .group{ border: 1px solid rgba(255,255,255,.10); border-radius: 12px; overflow:hidden; margin-bottom: 12px; background: rgba(8,12,22,.55); }
+    .groupHeader{
+      display:flex; align-items:center; justify-content:space-between; padding: 10px 12px; gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03);
+    }
+    .groupHeader .meta{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .groupHeader .date{ font-weight: 740; letter-spacing:.2px; font-size: 13px; }
+    .groupHeader .counts{ color: var(--muted); font-size: 12px; }
+    .groupBody{ overflow:auto; }
+
+    .rowBtns{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; min-width: 220px; }
+    .btn-sm{ padding: 7px 10px; font-size: 12px; border-radius: 10px; }
+
+    .hint{ color: var(--muted); font-size: 12px; line-height:1.35; }
+    .error{ color: var(--bad); font-size: 12px; margin-top: 8px; display:none; }
+    .kbd{
+      display:inline-block; padding: 2px 6px; border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.25);
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+    }
+    .footerNote{ margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    dialog{
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      color: var(--text);
+      border-radius: 14px;
+      padding: 0;
+      width: min(860px, 94vw);
+      box-shadow: var(--shadow);
+    }
+    dialog::backdrop{ background: rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+    .dlgHd{
+      padding: 14px 14px 10px; border-bottom: 1px solid rgba(255,255,255,.12);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .dlgHd strong{ font-size: 14px; letter-spacing:.2px; }
+    .dlgBd{ padding: 14px; }
+    .dlgActions{
+      padding: 12px 14px 14px;
+      display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;
+      border-top: 1px solid rgba(255,255,255,.12);
+    }
+
+    .tabPanel{ display:none; }
+    .tabPanel.active{ display:block; }
+
+    .checkCell{ display:flex; align-items:center; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+    .checkCell input[type="checkbox"]{ width:18px; height:18px; accent-color: var(--ok); cursor:pointer; }
+
+    .pickList{ border: 1px solid rgba(255,255,255,.10); border-radius: 12px; overflow:hidden; background: rgba(8,12,22,.55); }
+    .pickItem{
+      display:flex; justify-content:space-between; gap:10px;
+      padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+      align-items:flex-start;
+    }
+    .pickItem:last-child{ border-bottom:none; }
+    .pickMeta{ display:flex; flex-direction:column; gap:4px; }
+    .pickActions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .hl{ background: rgba(122,162,255,.10); }
+
+    /* USDT */
+    .usdtGrid{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    .usdtTop{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start; }
+    @media (max-width: 980px){ .usdtTop{ grid-template-columns: 1fr; } }
+
+    .usdtCovLine{
+      margin-top: 6px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+    }
+    .usdtCovFill{
+      height:100%;
+      background: rgba(54,211,153,.55);
+      width: 0%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Controle Financeiro - Comprovantes, Extrato & USDT</h1>
+        <div class="subtitle">
+          <b>Extrato</b> = entrada. <b>Compra USDT</b> = saída. <b>Comprovante</b> = prova do cliente.<br/>
+          <b>USDT</b> agora tem: (1) custo por linha e (2) <b>compras manuais</b> que <u>consomem</u> as entradas do dia e preenchem barras verdes.
+        </div>
+        <div class="tabs">
+          <button class="tabBtn active" id="tabBtnReceipts" type="button">Comprovantes</button>
+          <button class="tabBtn" id="tabBtnBank" type="button">Extrato (interno)</button>
+          <button class="tabBtn" id="tabBtnUsdt" type="button">USDT</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- TAB: COMPROVANTES -->
+    <div class="tabPanel active" id="tabReceipts">
+      <div class="grid">
+        <section class="card" aria-label="Registrar comprovante">
+          <div class="hd">
+            <h2>Registrar comprovante</h2>
+            <span class="pill"><span class="dot"></span> Salvo no navegador (local)</span>
+          </div>
+          <div class="bd">
+            <form id="frmReceipt">
+              <div class="row3">
+                <label>Data da transferência
+                  <input id="r_transferDate" type="date" required />
+                </label>
+                <label>Hora da transferência (HH:MM)
+                  <input id="r_transferTime" type="time" required />
+                </label>
+                <label>Segundos (opcional)
+                  <input id="r_transferSec" type="number" min="0" max="59" placeholder="00–59" />
+                </label>
+              </div>
+
+              <div class="row">
+                <label>Nome / Identificação (opcional)
+                  <input id="r_name" type="text" placeholder="Ex.: João Silva / Banco X / Pix" maxlength="120" />
+                </label>
+                <label>Valor
+                  <input id="r_amount" type="number" step="0.01" min="0" placeholder="Ex.: 150.00" required />
+                  <div id="r_amountPreview" class="muted small mono">Formato: 0,00</div>
+                </label>
+              </div>
+
+              <label>Observação (opcional)
+                <textarea id="r_note" placeholder="Ex.: nº do comprovante, referência, detalhes..."></textarea>
+              </label>
+
+              <div class="actions">
+                <button type="button" id="r_btnClear" class="btn-sm">Limpar</button>
+                <button type="submit" class="btn-primary">Salvar comprovante</button>
+              </div>
+
+              <div id="r_formError" class="error"></div>
+            </form>
+          </div>
+        </section>
+
+        <section class="card" aria-label="Resumo e filtros (comprovantes)">
+          <div class="hd">
+            <h2>Resumo e filtros</h2>
+            <div class="pill"><span class="dot ok"></span> Histórico</div>
+          </div>
+          <div class="bd">
+            <div class="toolbar" style="margin-bottom:10px;">
+              <div class="left">
+                <label style="min-width: 240px;">Buscar
+                  <input id="r_q" type="text" placeholder="Nome, valor, data, observação..." />
+                </label>
+                <label style="min-width: 200px;">Ordenar
+                  <select id="r_sortMode">
+                    <option value="transfer_desc">Transferência (mais recente)</option>
+                    <option value="transfer_asc">Transferência (mais antiga)</option>
+                    <option value="created_desc">Registro (mais recente)</option>
+                    <option value="created_asc">Registro (mais antigo)</option>
+                    <option value="amount_desc">Valor (maior)</option>
+                    <option value="amount_asc">Valor (menor)</option>
+                    <option value="name_asc">Nome (A-Z)</option>
+                    <option value="name_desc">Nome (Z-A)</option>
+                  </select>
+                </label>
+                <label style="min-width: 220px;">Agrupar por
+                  <select id="r_groupMode">
+                    <option value="transferDate">Data da transferência</option>
+                    <option value="createdDate">Data do registro</option>
+                    <option value="none">Sem agrupamento (tabela)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="right">
+                <label class="pill" style="cursor:pointer;">
+                  <input id="r_onlyAlerts" type="checkbox" style="width:auto; margin:0 6px 0 0; accent-color: var(--warn);" />
+                  Somente com alerta
+                </label>
+                <button type="button" id="r_btnRecheck" class="btn-sm">Reverificar</button>
+                <button type="button" id="btnWipeAll" class="btn-danger btn-sm">Apagar tudo</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="card" style="box-shadow:none; background: rgba(255,255,255,.04); border-radius: 12px;">
+                <div class="bd" style="padding:12px;">
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot ok"></span> Registros</span>
+                    <span id="r_statTotal" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot bad"></span> Exatos</span>
+                    <span id="r_statExact" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot warn"></span> Possíveis (valor)</span>
+                    <span id="r_statPossible" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot"></span> Total (soma)</span>
+                    <span id="r_statSum" class="mono">0,00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="box-shadow:none; background: rgba(255,255,255,.04); border-radius: 12px;">
+                <div class="bd" style="padding:12px;">
+                  <div class="hint">
+                    <b>Alertas (comprovantes):</b><br/>
+                    <span class="kbd">Exato</span>: Data + Hora + Seg (se houver) + Valor + Nome iguais<br/>
+                    <span class="kbd">Possível (valor)</span>: Data + Hora + Valor iguais (ignora nome; segundos não obrigatórios)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="footerNote">Tudo fica salvo somente neste navegador/dispositivo.</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:14px;" aria-label="Histórico de comprovantes">
+        <div class="hd">
+          <h2>Histórico (Comprovantes)</h2>
+          <div class="pill"><span class="dot"></span> Visualização</div>
+        </div>
+        <div class="bd">
+          <div id="r_list"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB: EXTRATO -->
+    <div class="tabPanel" id="tabBank">
+      <div class="grid">
+        <section class="card" aria-label="Registrar extrato interno">
+          <div class="hd">
+            <h2>Registrar extrato (interno)</h2>
+            <span class="pill"><span class="dot"></span> Conciliação automática</span>
+          </div>
+          <div class="bd">
+            <form id="frmBank">
+              <div class="row3">
+                <label>Data do extrato
+                  <input id="b_date" type="date" required />
+                </label>
+                <label>Hora (opcional)
+                  <input id="b_time" type="time" />
+                </label>
+                <label>Segundos (opcional)
+                  <input id="b_sec" type="number" min="0" max="59" placeholder="00–59" />
+                </label>
+              </div>
+
+              <div class="row">
+                <label>Nome / Descrição do extrato
+                  <input id="b_name" type="text" placeholder="Ex.: PIX RECEBIDO / Nome do pagador" maxlength="120" required />
+                </label>
+                <label>Valor
+                  <input id="b_amount" type="number" step="0.01" min="0" placeholder="Ex.: 150.00" required />
+                  <div id="b_amountPreview" class="muted small mono">Formato: 0,00</div>
+                </label>
+              </div>
+
+              <label>Observação (opcional)
+                <textarea id="b_note" placeholder="Detalhes internos, referência, etc."></textarea>
+              </label>
+
+              <div class="actions">
+                <button type="button" id="b_btnClear" class="btn-sm">Limpar</button>
+                <button type="submit" class="btn-primary">Salvar no extrato</button>
+              </div>
+
+              <div id="b_formError" class="error"></div>
+            </form>
+
+            <div class="footerNote">
+              Conciliação no extrato: compara por <b>Data + Valor + Nome</b> (hora não é primordial). Use <b>Vincular</b> quando houver dúvidas.
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="Resumo e filtros (extrato)">
+          <div class="hd">
+            <h2>Checklist / Conciliação</h2>
+            <div class="pill"><span class="dot ok"></span> Status</div>
+          </div>
+          <div class="bd">
+            <div class="toolbar" style="margin-bottom:10px;">
+              <div class="left">
+                <label style="min-width: 240px;">Buscar
+                  <input id="b_q" type="text" placeholder="Nome, valor, data, observação..." />
+                </label>
+                <label style="min-width: 220px;">Filtro
+                  <select id="b_filter">
+                    <option value="all">Todos</option>
+                    <option value="unmatched">Somente sem match</option>
+                    <option value="matched">Somente com match</option>
+                    <option value="unconfirmed">Somente não confirmados</option>
+                    <option value="linked">Somente vinculados</option>
+                  </select>
+                </label>
+                <label style="min-width: 220px;">Ordenar
+                  <select id="b_sortMode">
+                    <option value="date_desc">Data (mais recente)</option>
+                    <option value="date_asc">Data (mais antiga)</option>
+                    <option value="amount_desc">Valor (maior)</option>
+                    <option value="amount_asc">Valor (menor)</option>
+                    <option value="created_desc">Registro (mais recente)</option>
+                    <option value="created_asc">Registro (mais antigo)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="right">
+                <button type="button" id="b_btnReconcile" class="btn-sm">Recalcular conciliação</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="card" style="box-shadow:none; background: rgba(255,255,255,.04); border-radius: 12px;">
+                <div class="bd" style="padding:12px;">
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot ok"></span> Linhas do extrato</span>
+                    <span id="b_statTotal" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot"></span> Total entradas (extrato)</span>
+                    <span id="b_statSum" class="mono">0,00</span>
+                  </div>
+                  <div style="height:8px"></div>
+
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot warn"></span> Total compras USDT (saída)</span>
+                    <span id="b_statUsdtSpent" class="mono">0,00</span>
+                  </div>
+                  <div style="height:8px"></div>
+
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot ok"></span> Saldo (entradas - saídas)</span>
+                    <span id="b_statBalance" class="mono">0,00</span>
+                  </div>
+
+                  <div id="b_statBalanceHint" class="muted small" style="margin-top:8px;"></div>
+
+                  <div style="height:10px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot ok"></span> Match forte</span>
+                    <span id="b_statStrong" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot warn"></span> Possível (sem nome)</span>
+                    <span id="b_statWeak" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot bad"></span> Sem match</span>
+                    <span id="b_statNone" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot"></span> Confirmados</span>
+                    <span id="b_statConfirmed" class="mono">0</span>
+                  </div>
+                  <div style="height:8px"></div>
+                  <div class="pill" style="justify-content:space-between; width:100%;">
+                    <span><span class="dot"></span> Vinculados</span>
+                    <span id="b_statLinked" class="mono">0</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="box-shadow:none; background: rgba(255,255,255,.04); border-radius: 12px;">
+                <div class="bd" style="padding:12px;">
+                  <div class="hint">
+                    <b>Saldo:</b> compras USDT saem do saldo por: custo por linha (extrato/comprovante) + compras manuais.<br/>
+                    Se ainda não chegou o extrato/comprovante do dia, o saldo pode ficar negativo (normal).
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="footerNote">Checklist: marque como <b>confirmado</b> quando validar manualmente.</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:14px;" aria-label="Extrato e conciliação">
+        <div class="hd">
+          <h2>Extrato (interno) + Checklist</h2>
+          <div class="pill"><span class="dot"></span> Conciliação</div>
+        </div>
+        <div class="bd">
+          <div id="b_list"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB: USDT -->
+    <div class="tabPanel" id="tabUsdt">
+      <div class="usdtGrid">
+        <div class="usdtTop">
+          <section class="card" aria-label="Filtro diário USDT + compra manual">
+            <div class="hd">
+              <h2>USDT do dia</h2>
+              <div class="pill"><span class="dot"></span> Compras manuais consomem entradas</div>
+            </div>
+            <div class="bd">
+              <div class="row">
+                <label>Data
+                  <input id="u_date" type="date" />
+                </label>
+                <label>Buscar (somente visual)
+                  <input id="u_q" type="text" placeholder="Nome, valor, observação..." />
+                </label>
+              </div>
+
+              <div class="group" style="margin-top:10px;">
+                <div class="groupHeader">
+                  <div class="meta">
+                    <span class="chip">Compra manual de USDT</span>
+                    <span class="muted small">não vinculada a comprovante</span>
+                  </div>
+                </div>
+                <div class="bd" style="padding:12px;">
+                  <form id="frmManualUsdt">
+                    <div class="row3">
+                      <label>Valor (Fiat)
+                        <input id="u_manualAmount" type="number" step="0.01" min="0" placeholder="Ex.: 50000" required />
+                        <div id="u_manualAmountPreview" class="muted small mono">Formato: 0,00</div>
+                      </label>
+                      <label>Custo do USDT (Fiat por 1 USDT)
+                        <input id="u_manualPrice" type="text" inputmode="decimal" placeholder="Ex.: 5,55" required />
+                        <div class="muted small mono">Aceita vírgula ou ponto</div>
+                      </label>
+                      <label>Obs (opcional)
+                        <input id="u_manualNote" type="text" placeholder="Ex.: compra OTC / exchange" maxlength="120" />
+                      </label>
+                    </div>
+                    <div class="actions" style="margin-top:8px;">
+                      <button type="button" id="u_btnManualClear" class="btn-sm">Limpar</button>
+                      <button type="submit" class="btn-primary">Salvar compra manual</button>
+                    </div>
+                    <div id="u_manualError" class="error"></div>
+                  </form>
+
+                  <div style="height:10px;"></div>
+                  <div class="hint">
+                    As compras manuais <b>consomem</b> as entradas do dia e pintam as barras de verde por trás.
+                  </div>
+
+                  <div style="height:10px;"></div>
+                  <div id="u_manualList"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="Resumo USDT do dia">
+            <div class="hd">
+              <h2>Resumo do dia (USDT)</h2>
+              <div class="pill"><span class="dot ok"></span> Média ponderada</div>
+            </div>
+            <div class="bd">
+              <div class="pill" style="justify-content:space-between; width:100%;">
+                <span><span class="dot warn"></span> Total comprado (Fiat)</span>
+                <span id="u_sumFiatBought" class="mono">0,00</span>
+              </div>
+              <div style="height:8px"></div>
+              <div class="pill" style="justify-content:space-between; width:100%;">
+                <span><span class="dot ok"></span> Total USDT (dia)</span>
+                <span id="u_sumUsdt" class="mono">0,0000</span>
+              </div>
+              <div style="height:8px"></div>
+              <div class="pill" style="justify-content:space-between; width:100%;">
+                <span><span class="dot"></span> Custo médio ponderado (dia)</span>
+                <span id="u_avgPrice" class="mono">—</span>
+              </div>
+              <div style="height:8px"></div>
+              <div class="pill" style="justify-content:space-between; width:100%;">
+                <span><span class="dot bad"></span> Compra sem cobertura (Fiat)</span>
+                <span id="u_uncovered" class="mono">0,00</span>
+              </div>
+
+              <div class="footerNote">
+                Ponderado: <span class="kbd">Σ(preço × valorFiat) / Σ(valorFiat)</span> (inclui compras manuais + custos por linha).
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="card" aria-label="Tabela USDT">
+          <div class="hd">
+            <h2>Entradas do dia (Extrato + Comprovantes) + Barras de consumo</h2>
+            <div class="pill"><span class="dot"></span> Sem duplicar (vínculo = unificado)</div>
+          </div>
+          <div class="bd">
+            <div id="u_list"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIALOG: ALERTA DUPLICADO (COMPROVANTES) -->
+  <dialog id="dlgDup">
+    <div class="dlgHd">
+      <strong id="dupTitle">Alerta</strong>
+      <button id="btnCloseDup" class="btn-sm" type="button">Fechar</button>
+    </div>
+    <div class="dlgBd">
+      <div id="dupReason" class="hint" style="margin-bottom:10px;"></div>
+      <div class="group">
+        <div class="groupHeader">
+          <div class="meta">
+            <span class="chip possible">Novo</span>
+            <span id="dupNew" class="mono small"></span>
+          </div>
+        </div>
+        <div class="groupHeader" style="border-bottom:none;">
+          <div class="meta">
+            <span class="chip possible">Existente</span>
+            <span id="dupOld" class="mono small"></span>
+          </div>
+        </div>
+      </div>
+      <div class="hint">Você pode cancelar para evitar duplicidade, ou salvar mesmo assim.</div>
+    </div>
+    <div class="dlgActions">
+      <button id="btnCancelDup" type="button">Cancelar</button>
+      <button id="btnForceSave" type="button" class="btn-primary">Salvar mesmo assim</button>
+    </div>
+  </dialog>
+
+  <!-- DIALOG: VINCULAR COMPROVANTE -->
+  <dialog id="dlgPickReceipt">
+    <div class="dlgHd">
+      <strong>Vincular comprovante ao extrato</strong>
+      <button id="btnClosePick" class="btn-sm" type="button">Fechar</button>
+    </div>
+    <div class="dlgBd">
+      <div class="hint" style="margin-bottom:10px;">
+        Mostrando comprovantes candidatos com a mesma <b>Data + Valor</b> desta linha do extrato.
+      </div>
+
+      <div class="group" style="margin-bottom:12px;">
+        <div class="groupHeader">
+          <div class="meta">
+            <span class="chip linked">Extrato</span>
+            <span id="pickBankSummary" class="mono small"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom:10px;">
+        <label style="margin:0;">Buscar dentro dos candidatos
+          <input id="pickSearch" type="text" placeholder="Filtrar por nome, hora, observação..." />
+        </label>
+        <div class="card" style="box-shadow:none; background: rgba(255,255,255,.04); border-radius: 12px;">
+          <div class="bd" style="padding:12px;">
+            <div class="hint"><b>Dica:</b> ao vincular, o item não duplica no USDT.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pickList" class="pickList"></div>
+      <div id="pickEmpty" class="hint" style="display:none; margin-top:10px;">Nenhum candidato encontrado.</div>
+    </div>
+    <div class="dlgActions">
+      <button id="btnUnlink" type="button" class="btn-danger">Desvincular</button>
+      <button id="btnClosePick2" type="button">Fechar</button>
+    </div>
+  </dialog>
+
+  <script>
+    // =========================
+    // STORAGE (v9)
+    // =========================
+    const LS_KEY = "controle_financeiro_v9";
+
+    // =========================
+    // UTIL
+    // =========================
+    function esc(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+    function pad2(n){ return String(n).padStart(2,"0"); }
+    function nowISO(){ return new Date().toISOString(); }
+    function dateOnlyISO(iso){
+      const d = new Date(iso);
+      return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+    }
+    function humanDate(yyyy_mm_dd){
+      if(!yyyy_mm_dd) return "";
+      const [y,m,d] = yyyy_mm_dd.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    function fmtNumber2(n){
+      const num = Number(n || 0);
+      return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function fmtNumber4(n){
+      const num = Number(n || 0);
+      return num.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    }
+    function toCents(amount){
+      const v = Number(amount);
+      if(!isFinite(v)) return 0;
+      return Math.round(v * 100);
+    }
+    function fromCents(cents){ return (Number(cents || 0) / 100); }
+
+    // preço USDT em micros
+    function toMicros(v){
+      const n = Number(v);
+      if(!isFinite(n) || n <= 0) return null;
+      return Math.round(n * 1_000_000);
+    }
+    function fromMicros(m){
+      const n = Number(m);
+      if(!isFinite(n) || n <= 0) return null;
+      return n / 1_000_000;
+    }
+
+    function normalizeName(name){
+      return String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+    function normalizeSeconds(sec){
+      const s = String(sec ?? "").trim();
+      if(s === "") return "";
+      const n = Number(s);
+      if(!Number.isFinite(n)) return "";
+      if(n < 0 || n > 59) return "";
+      return pad2(Math.trunc(n));
+    }
+    function buildTimeStr(hm, sec){
+      const s = normalizeSeconds(sec);
+      if(!hm) return "";
+      return s ? `${hm}:${s}` : hm;
+    }
+    function humanDateTime(date, hm, sec){
+      const t = buildTimeStr(hm, sec);
+      return `${humanDate(date)} ${t}`.trim();
+    }
+    function stampForSort(date, hm, sec){
+      const s = normalizeSeconds(sec) || "00";
+      const hhmm = hm || "00:00";
+      return new Date(`${date}T${hhmm}:${s}:00`);
+    }
+    function uid(){ return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16); }
+
+    function updateAmountPreview(inputEl, previewEl){
+      const cents = toCents(inputEl.value);
+      previewEl.textContent = "Formato: " + fmtNumber2(fromCents(cents));
+    }
+
+    // Aceita "5,55" ou "5.55" e ignora separador de milhar
+    function parseDecimalLooseBR(s){
+      let t = String(s ?? "").trim();
+      if(!t) return null;
+      t = t.replace(/\s+/g, "");
+      const lastComma = t.lastIndexOf(",");
+      const lastDot = t.lastIndexOf(".");
+      if(lastComma !== -1 && lastDot !== -1){
+        if(lastComma > lastDot){
+          t = t.replaceAll(".", "");
+          t = t.replaceAll(",", ".");
+        }else{
+          t = t.replaceAll(",", "");
+        }
+      }else if(lastComma !== -1){
+        t = t.replaceAll(".", "");
+        t = t.replaceAll(",", ".");
+      }else{
+        t = t.replaceAll(",", "");
+      }
+      const n = Number(t);
+      if(!isFinite(n) || n <= 0) return null;
+      return n;
+    }
+
+    function fmtPriceForInput(n){
+      if(n == null || !isFinite(n) || n <= 0) return "";
+      let s = n.toFixed(6);
+      s = s.replace(/0+$/,"").replace(/\.$/,"");
+      return s.replace(".", ",");
+    }
+
+    // =========================
+    // STATE
+    // =========================
+    let receipts = [];
+    let bankEntries = [];
+    let manualPurchases = []; // compras manuais de USDT (por data)
+
+    let pendingReceiptAdd = null;
+    let pendingDupInfo = null;
+
+    let pickingBankId = null;
+
+    // =========================
+    // LOAD / SAVE
+    // =========================
+    function saveAll(){
+      localStorage.setItem(LS_KEY, JSON.stringify({ receipts, bankEntries, manualPurchases }));
+    }
+
+    function coerceReceipt(x){
+      return {
+        id: String(x.id || uid()),
+        transferDate: String(x.transferDate || ""),
+        transferTime: String(x.transferTime || ""),
+        transferSec: normalizeSeconds(x.transferSec),
+        name: String(x.name || ""),
+        amountCents: Number.isFinite(Number(x.amountCents)) ? Number(x.amountCents) : toCents(x.amount || 0),
+        note: String(x.note || ""),
+        createdAt: String(x.createdAt || nowISO()),
+        dupExactOf: (x.dupExactOf == null ? null : String(x.dupExactOf)),
+        dupPossibleOf: (x.dupPossibleOf == null ? null : String(x.dupPossibleOf)),
+        // USDT (custo por linha)
+        usdtPriceMicros: (x.usdtPriceMicros == null ? null : Number(x.usdtPriceMicros)),
+        usdtPriceText: String(x.usdtPriceText || "")
+      };
+    }
+
+    function coerceBank(x){
+      return {
+        id: String(x.id || uid()),
+        bankDate: String(x.bankDate || ""),
+        bankTime: String(x.bankTime || ""),
+        bankSec: normalizeSeconds(x.bankSec),
+        name: String(x.name || ""),
+        amountCents: Number.isFinite(Number(x.amountCents)) ? Number(x.amountCents) : toCents(x.amount || 0),
+        note: String(x.note || ""),
+        createdAt: String(x.createdAt || nowISO()),
+        confirmed: !!x.confirmed,
+        linkedReceiptId: (x.linkedReceiptId == null ? null : String(x.linkedReceiptId)),
+        // USDT (custo por linha)
+        usdtPriceMicros: (x.usdtPriceMicros == null ? null : Number(x.usdtPriceMicros)),
+        usdtPriceText: String(x.usdtPriceText || "")
+      };
+    }
+
+    function coerceManual(x){
+      return {
+        id: String(x.id || uid()),
+        date: String(x.date || ""),
+        amountCents: Number.isFinite(Number(x.amountCents)) ? Number(x.amountCents) : toCents(x.amount || 0),
+        priceMicros: (x.priceMicros == null ? null : Number(x.priceMicros)),
+        priceText: String(x.priceText || ""),
+        note: String(x.note || ""),
+        createdAt: String(x.createdAt || nowISO())
+      };
+    }
+
+    function loadAll(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){
+          const parsed = JSON.parse(raw);
+          receipts = Array.isArray(parsed.receipts) ? parsed.receipts.map(coerceReceipt) : [];
+          bankEntries = Array.isArray(parsed.bankEntries) ? parsed.bankEntries.map(coerceBank) : [];
+          manualPurchases = Array.isArray(parsed.manualPurchases) ? parsed.manualPurchases.map(coerceManual) : [];
+          return;
+        }
+      }catch(e){ /* ignore */ }
+      receipts = [];
+      bankEntries = [];
+      manualPurchases = [];
+      saveAll();
+    }
+
+    // =========================
+    // DUPLICADOS (COMPROVANTES)
+    // =========================
+    function keyReceiptExact(r){
+      const sec = normalizeSeconds(r.transferSec);
+      const secKey = (sec === "") ? "__" : sec;
+      return `${r.transferDate}|${r.transferTime}|${secKey}|${normalizeName(r.name)}|${Number(r.amountCents)}`;
+    }
+    function keyReceiptPossibleValue(r){
+      return `${r.transferDate}|${r.transferTime}|${Number(r.amountCents)}`;
+    }
+    function recalcReceiptDuplicates(){
+      for(const r of receipts){ r.dupExactOf = null; r.dupPossibleOf = null; }
+      const sorted = [...receipts].sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const mapExact = new Map();
+      const mapPossible = new Map();
+      for(const r of sorted){
+        const kE = keyReceiptExact(r);
+        const kP = keyReceiptPossibleValue(r);
+        if(mapExact.has(kE)) r.dupExactOf = mapExact.get(kE);
+        else mapExact.set(kE, r.id);
+        if(mapPossible.has(kP)) r.dupPossibleOf = mapPossible.get(kP);
+        else mapPossible.set(kP, r.id);
+      }
+    }
+    function findExistingReceiptForAlert(newRec){
+      const kE = keyReceiptExact(newRec);
+      const kP = keyReceiptPossibleValue(newRec);
+      const exact = receipts.find(r => keyReceiptExact(r) === kE);
+      if(exact) return { type: "exact", existing: exact };
+      const possible = receipts.find(r => keyReceiptPossibleValue(r) === kP);
+      if(possible) return { type: "possible", existing: possible };
+      return null;
+    }
+
+    // =========================
+    // CONCILIAÇÃO (EXTRATO x COMPROVANTES)
+    // =========================
+    function getCandidatesForBank(b){
+      return receipts.filter(r =>
+        r.transferDate === b.bankDate && Number(r.amountCents) === Number(b.amountCents)
+      );
+    }
+
+    function reconcileOneBankEntry(b){
+      if(b.linkedReceiptId){
+        const r = receipts.find(x => x.id === b.linkedReceiptId);
+        if(!r) return { status: "linkedMissing", candidates: [], chosen: null };
+        const okBasic = (r.transferDate === b.bankDate) && (Number(r.amountCents) === Number(b.amountCents));
+        if(!okBasic) return { status: "linkedMismatch", candidates: [], chosen: r };
+        const bNameN = normalizeName(b.name);
+        const rNameN = normalizeName(r.name);
+        if(bNameN !== "" && rNameN !== "" && bNameN === rNameN) return { status: "strongLinked", candidates: [], chosen: r };
+        return { status: "weakLinked", candidates: [], chosen: r };
+      }
+
+      const candidates = getCandidatesForBank(b);
+      if(candidates.length === 0) return { status: "none", candidates: [] };
+
+      const bNameN = normalizeName(b.name);
+      const strong = candidates.filter(r => {
+        const rNameN = normalizeName(r.name);
+        return bNameN !== "" && rNameN !== "" && bNameN === rNameN;
+      });
+      if(strong.length > 0){
+        const chosen = [...strong].sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+        return { status: "strong", candidates, chosen, chosenGroup: strong };
+      }
+
+      const anyMissingName = candidates.some(r => normalizeName(r.name) === "") || (bNameN === "");
+      if(anyMissingName){
+        const chosen = [...candidates].sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+        return { status: "weak", candidates, chosen };
+      }
+
+      return { status: "none", candidates: [] };
+    }
+
+    function reconcileAllBank(){
+      const map = new Map();
+      for(const b of bankEntries){
+        map.set(b.id, reconcileOneBankEntry(b));
+      }
+      return map;
+    }
+
+    // =========================
+    // USDT - UNIFICAÇÃO SEM REPETIR (ENTRADAS DO DIA)
+    // =========================
+    function getUnifiedUsdtItemsByDate(dateStr, searchQ){
+      const q = String(searchQ || "").trim().toLowerCase();
+      const usedReceiptIds = new Set();
+      const items = [];
+
+      // 1) Extrato do dia (se tiver vínculo, vira unificado)
+      for(const b of bankEntries){
+        if(b.bankDate !== dateStr) continue;
+        const linkedReceipt = b.linkedReceiptId ? receipts.find(r => r.id === b.linkedReceiptId) : null;
+        if(linkedReceipt) usedReceiptIds.add(linkedReceipt.id);
+
+        const displayName = (b.name || "").trim() || (linkedReceipt?.name || "").trim();
+        const displayNote = (b.note || "").trim() || (linkedReceipt?.note || "").trim();
+
+        const hay = [
+          b.bankDate, buildTimeStr(b.bankTime, b.bankSec),
+          b.name, b.note || "",
+          linkedReceipt?.name || "", linkedReceipt?.note || "",
+          fmtNumber2(fromCents(b.amountCents))
+        ].join(" ").toLowerCase();
+        if(q && !hay.includes(q)) continue;
+
+        items.push({
+          kind: linkedReceipt ? "unificado" : "extrato",
+          date: b.bankDate,
+          time: buildTimeStr(b.bankTime, b.bankSec),
+          name: displayName,
+          note: displayNote,
+          amountCents: b.amountCents,
+          targetType: "bank",
+          targetId: b.id,
+          bankId: b.id,
+          receiptId: linkedReceipt ? linkedReceipt.id : null
+        });
+      }
+
+      // 2) Comprovantes do dia que não estão “cobertos” por extrato vinculado
+      for(const r of receipts){
+        if(r.transferDate !== dateStr) continue;
+        if(usedReceiptIds.has(r.id)) continue;
+
+        const hay = [
+          r.transferDate, buildTimeStr(r.transferTime, r.transferSec),
+          r.name, r.note || "",
+          fmtNumber2(fromCents(r.amountCents))
+        ].join(" ").toLowerCase();
+        if(q && !hay.includes(q)) continue;
+
+        items.push({
+          kind: "comprovante",
+          date: r.transferDate,
+          time: buildTimeStr(r.transferTime, r.transferSec),
+          name: (r.name || "").trim(),
+          note: (r.note || "").trim(),
+          amountCents: r.amountCents,
+          targetType: "receipt",
+          targetId: r.id,
+          bankId: null,
+          receiptId: r.id
+        });
+      }
+
+      items.sort((a,b) => {
+        const ad = new Date(`${a.date}T${a.time ? a.time : "00:00"}:00`);
+        const bd = new Date(`${b.date}T${b.time ? b.time : "00:00"}:00`);
+        return ad - bd || (a.amountCents - b.amountCents);
+      });
+
+      return items;
+    }
+
+    function getTargetObject(type, id){
+      if(type === "bank") return bankEntries.find(x => x.id === id) || null;
+      if(type === "receipt") return receipts.find(x => x.id === id) || null;
+      return null;
+    }
+
+    function getUsdtPrice(targetType, targetId){
+      const t = getTargetObject(targetType, targetId);
+      if(!t) return { micros: null, text: "" };
+      return {
+        micros: (t.usdtPriceMicros == null ? null : Number(t.usdtPriceMicros)),
+        text: String(t.usdtPriceText || "")
+      };
+    }
+
+    function setUsdtPrice(targetType, targetId, inputText){
+      const t = getTargetObject(targetType, targetId);
+      if(!t) return;
+      t.usdtPriceText = String(inputText || "");
+      const parsed = parseDecimalLooseBR(t.usdtPriceText);
+      t.usdtPriceMicros = (parsed == null) ? null : toMicros(parsed);
+      saveAll();
+    }
+
+    // =========================
+    // MANUAL PURCHASES
+    // =========================
+    function getManualByDate(dateStr){
+      return manualPurchases
+        .filter(x => x.date === dateStr)
+        .sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }
+
+    function addManualPurchase(dateStr, amountCents, priceText, note){
+      const p = parseDecimalLooseBR(priceText);
+      if(p == null) throw new Error("Custo do USDT inválido. Use exemplo: 5,55");
+      if(!dateStr) throw new Error("Selecione uma data.");
+      if(!Number.isFinite(amountCents) || amountCents <= 0) throw new Error("Valor (Fiat) deve ser maior que zero.");
+
+      const obj = {
+        id: uid(),
+        date: dateStr,
+        amountCents: Number(amountCents),
+        priceMicros: toMicros(p),
+        priceText: fmtPriceForInput(p),
+        note: String(note || "").trim(),
+        createdAt: nowISO()
+      };
+      manualPurchases.push(obj);
+      saveAll();
+      return obj;
+    }
+
+    function deleteManualPurchase(id){
+      manualPurchases = manualPurchases.filter(x => x.id !== id);
+      saveAll();
+    }
+
+    // =========================
+    // ALGORITMO DE CONSUMO (BARRAS VERDES)
+    // Regras:
+    // - Entradas do dia = itens unificados (extrato + comprovantes não vinculados)
+    // - Primeiro, “compra por linha” consome 100% do próprio item (se tiver custo preenchido)
+    // - Depois, compras manuais consomem o saldo restante dos itens em ordem
+    // - O que sobrar sem item vira "sem cobertura"
+    // =========================
+    function computeCoverageForDate(dateStr, itemsAll){
+      const remaining = new Map(); // key -> remaining cents
+      const consumed = new Map();  // key -> consumed cents
+
+      for(const it of itemsAll){
+        const key = `${it.targetType}_${it.targetId}`;
+        remaining.set(key, Number(it.amountCents) || 0);
+        consumed.set(key, 0);
+      }
+
+      // 1) compras por linha (se custo preenchido)
+      const purchases = []; // {amountCents, priceMicros}
+      for(const it of itemsAll){
+        const key = `${it.targetType}_${it.targetId}`;
+        const price = getUsdtPrice(it.targetType, it.targetId).micros;
+        if(price != null && Number(price) > 0){
+          const amt = Number(it.amountCents) || 0;
+          consumed.set(key, amt);
+          remaining.set(key, 0);
+          purchases.push({ amountCents: amt, priceMicros: Number(price) });
+        }
+      }
+
+      // 2) compras manuais
+      let uncoveredCents = 0;
+      const manuals = getManualByDate(dateStr);
+      for(const m of manuals){
+        purchases.push({ amountCents: Number(m.amountCents)||0, priceMicros: Number(m.priceMicros)||0 });
+
+        let need = Number(m.amountCents) || 0;
+        for(const it of itemsAll){
+          if(need <= 0) break;
+          const key = `${it.targetType}_${it.targetId}`;
+          const rem = Number(remaining.get(key) || 0);
+          if(rem <= 0) continue;
+          const take = Math.min(rem, need);
+          remaining.set(key, rem - take);
+          consumed.set(key, Number(consumed.get(key) || 0) + take);
+          need -= take;
+        }
+        if(need > 0) uncoveredCents += need;
+      }
+
+      return { consumed, uncoveredCents, purchases };
+    }
+
+    function computePurchaseStats(purchases){
+      let sumFiatCents = 0;
+      let sumUsdt = 0;
+      let sumWeighted = 0; // Σ(preço × valorFiat)
+      let sumWeights = 0;
+
+      for(const p of purchases){
+        const amtC = Number(p.amountCents)||0;
+        const pm = Number(p.priceMicros)||0;
+        if(amtC <= 0 || pm <= 0) continue;
+        const price = fromMicros(pm);
+        const fiat = fromCents(amtC);
+
+        sumFiatCents += amtC;
+        sumUsdt += (fiat / price);
+
+        sumWeighted += (price * fiat);
+        sumWeights += fiat;
+      }
+
+      return {
+        sumFiatCents,
+        sumUsdt,
+        avgPrice: (sumWeights > 0) ? (sumWeighted / sumWeights) : null
+      };
+    }
+
+    // =========================
+    // SALDO DO EXTRATO (Entradas - Compras USDT)
+    // Agora inclui:
+    // - compras por linha (extrato/comprovante sem vínculo)
+    // - compras manuais
+    // =========================
+    function computeBalance(){
+      const inflowCents = bankEntries.reduce((acc,b) => acc + (Number(b.amountCents)||0), 0);
+
+      let spentCents = 0;
+
+      // saídas por custo por linha no extrato
+      for(const b of bankEntries){
+        if(b.usdtPriceMicros != null && Number(b.usdtPriceMicros) > 0){
+          spentCents += (Number(b.amountCents)||0);
+        }
+      }
+
+      // saídas por custo por linha em comprovantes soltos (sem extrato vinculado)
+      const linkedReceiptIds = new Set(bankEntries.filter(b => b.linkedReceiptId).map(b => b.linkedReceiptId));
+      for(const r of receipts){
+        if(linkedReceiptIds.has(r.id)) continue;
+        if(r.usdtPriceMicros != null && Number(r.usdtPriceMicros) > 0){
+          spentCents += (Number(r.amountCents)||0);
+        }
+      }
+
+      // saídas por compras manuais
+      for(const m of manualPurchases){
+        spentCents += (Number(m.amountCents)||0);
+      }
+
+      return { inflowCents, spentCents, balanceCents: inflowCents - spentCents };
+    }
+
+    function updateBankBalanceUI(){
+      const bal = computeBalance();
+      document.getElementById("b_statUsdtSpent").textContent = fmtNumber2(fromCents(bal.spentCents));
+      document.getElementById("b_statBalance").textContent = fmtNumber2(fromCents(bal.balanceCents));
+      const hint = document.getElementById("b_statBalanceHint");
+      if(bal.balanceCents < 0){
+        hint.innerHTML = `<span class="chip possible">Atenção</span> Compras USDT maiores que entradas do extrato (provável atraso no extrato).`;
+      }else{
+        hint.textContent = "";
+      }
+    }
+
+    // =========================
+    // RENDER: COMPROVANTES
+    // =========================
+    function getFilteredReceipts(){
+      const q = document.getElementById("r_q").value.trim().toLowerCase();
+      const onlyAlerts = document.getElementById("r_onlyAlerts").checked;
+
+      let arr = [...receipts];
+
+      if(q){
+        arr = arr.filter(r => {
+          const hay = [
+            r.transferDate,
+            buildTimeStr(r.transferTime, r.transferSec),
+            r.name, normalizeName(r.name),
+            fmtNumber2(fromCents(r.amountCents)),
+            r.note || "", r.createdAt
+          ].join(" ").toLowerCase();
+          return hay.includes(q);
+        });
+      }
+
+      if(onlyAlerts){
+        arr = arr.filter(r => (r.dupExactOf !== null) || (r.dupPossibleOf !== null));
+      }
+
+      const sortMode = document.getElementById("r_sortMode").value;
+      arr.sort((a,b) => {
+        const adt = stampForSort(a.transferDate, a.transferTime, a.transferSec);
+        const bdt = stampForSort(b.transferDate, b.transferTime, b.transferSec);
+        const ac = new Date(a.createdAt);
+        const bc = new Date(b.createdAt);
+
+        switch(sortMode){
+          case "transfer_asc": return adt - bdt || ac - bc;
+          case "transfer_desc": return bdt - adt || bc - ac;
+          case "created_asc": return ac - bc || adt - bdt;
+          case "created_desc": return bc - ac || bdt - adt;
+          case "amount_asc": return a.amountCents - b.amountCents || bdt - adt;
+          case "amount_desc": return b.amountCents - a.amountCents || bdt - adt;
+          case "name_asc": return normalizeName(a.name).localeCompare(normalizeName(b.name)) || bdt - adt;
+          case "name_desc": return normalizeName(b.name).localeCompare(normalizeName(a.name)) || bdt - adt;
+          default: return bdt - adt || bc - ac;
+        }
+      });
+
+      return arr;
+    }
+
+    function groupReceipts(arr, mode){
+      const groups = new Map();
+      for(const r of arr){
+        let key = "";
+        if(mode === "transferDate") key = r.transferDate || "Sem data";
+        else if(mode === "createdDate") key = dateOnlyISO(r.createdAt);
+        else key = "all";
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+      return groups;
+    }
+
+    function receiptAlertBadge(r){
+      if(r.dupExactOf !== null){
+        return `<span class="chip exact">Exato</span><div class="muted small mono">Ref: ${esc(r.dupExactOf)}</div>`;
+      }
+      if(r.dupPossibleOf !== null){
+        return `<span class="chip possible">Possível (valor)</span><div class="muted small mono">Ref: ${esc(r.dupPossibleOf)}</div>`;
+      }
+      return `<span class="chip">Nenhum</span>`;
+    }
+
+    function renderReceiptsStats(){
+      const total = receipts.length;
+      const exactCount = receipts.filter(r => r.dupExactOf !== null).length;
+      const possibleCount = receipts.filter(r => (r.dupExactOf === null) && (r.dupPossibleOf !== null)).length;
+      const sumCents = receipts.reduce((acc,r) => acc + (Number(r.amountCents) || 0), 0);
+
+      document.getElementById("r_statTotal").textContent = String(total);
+      document.getElementById("r_statExact").textContent = String(exactCount);
+      document.getElementById("r_statPossible").textContent = String(possibleCount);
+      document.getElementById("r_statSum").textContent = fmtNumber2(fromCents(sumCents));
+    }
+
+    function renderReceiptRow(r){
+      const transfer = humanDateTime(r.transferDate, r.transferTime, r.transferSec);
+      const created = new Date(r.createdAt);
+      const createdHuman = `${pad2(created.getDate())}/${pad2(created.getMonth()+1)}/${created.getFullYear()} ${pad2(created.getHours())}:${pad2(created.getMinutes())}`;
+
+      const note = (r.note || "").trim();
+      const noteHtml = note ? `<div class="muted small" style="margin-top:4px;">${esc(note)}</div>` : "";
+      const name = (r.name || "").trim();
+      const nameHtml = name ? esc(name) : `<span class="muted">(sem nome)</span>`;
+
+      return `
+        <tr data-id="${esc(r.id)}">
+          <td class="nowrap">
+            <div class="mono">${esc(transfer)}</div>
+          </td>
+          <td>
+            <div style="font-weight:650;">${nameHtml}</div>
+            ${noteHtml}
+          </td>
+          <td class="nowrap">
+            <div class="mono" style="font-weight:750;">${esc(fmtNumber2(fromCents(r.amountCents)))}</div>
+          </td>
+          <td class="nowrap">
+            <div class="mono">${esc(createdHuman)}</div>
+          </td>
+          <td class="nowrap">${receiptAlertBadge(r)}</td>
+          <td class="nowrap" style="text-align:right;">
+            <div class="rowBtns">
+              <button class="btn-sm btn-danger" data-action="delReceipt" type="button">Apagar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderReceiptsTable(arr){
+      return `
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="nowrap">Transferência</th>
+                <th>Nome</th>
+                <th class="nowrap">Valor</th>
+                <th class="nowrap">Registro</th>
+                <th>Alerta</th>
+                <th class="nowrap" style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${arr.map(renderReceiptRow).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function wireReceiptRowButtons(){
+      document.querySelectorAll('button[data-action="delReceipt"]').forEach(btn => {
+        btn.onclick = () => {
+          const tr = btn.closest("tr");
+          if(!tr) return;
+          deleteReceipt(tr.getAttribute("data-id"));
+        };
+      });
+    }
+
+    function renderReceipts(){
+      renderReceiptsStats();
+
+      const listEl = document.getElementById("r_list");
+      const arr = getFilteredReceipts();
+      const groupMode = document.getElementById("r_groupMode").value;
+
+      if(arr.length === 0){
+        listEl.innerHTML = `<div class="hint">Nenhum comprovante encontrado.</div>`;
+        return;
+      }
+
+      if(groupMode === "none"){
+        listEl.innerHTML = renderReceiptsTable(arr);
+        wireReceiptRowButtons();
+        return;
+      }
+
+      const groups = groupReceipts(arr, groupMode);
+      const keys = Array.from(groups.keys()).sort((a,b) => {
+        if(a === "Sem data") return 1;
+        if(b === "Sem data") return -1;
+        return (new Date(b + "T00:00:00")) - (new Date(a + "T00:00:00"));
+      });
+
+      let html = "";
+      for(const key of keys){
+        const rows = groups.get(key);
+        const sumCents = rows.reduce((acc,r)=>acc+r.amountCents,0);
+        const alerts = rows.filter(r => (r.dupExactOf !== null) || (r.dupPossibleOf !== null)).length;
+
+        const title = (groupMode === "transferDate")
+          ? `Data da transferência: ${humanDate(key)}`
+          : `Data do registro: ${humanDate(key)}`;
+
+        html += `
+          <div class="group">
+            <div class="groupHeader">
+              <div class="meta">
+                <span class="date">${esc(title)}</span>
+                <span class="counts">
+                  ${rows.length} registro(s) • Total: <span class="mono">${esc(fmtNumber2(fromCents(sumCents)))}</span>
+                  ${alerts ? ` • <span class="chip possible">Alertas: ${alerts}</span>` : ""}
+                </span>
+              </div>
+            </div>
+            <div class="groupBody">
+              ${renderReceiptsTable(rows)}
+            </div>
+          </div>
+        `;
+      }
+
+      listEl.innerHTML = html;
+      wireReceiptRowButtons();
+    }
+
+    // =========================
+    // RENDER: EXTRATO
+    // =========================
+    function getFilteredBank(reconMap){
+      const q = document.getElementById("b_q").value.trim().toLowerCase();
+      const filter = document.getElementById("b_filter").value;
+      let arr = [...bankEntries];
+
+      if(q){
+        arr = arr.filter(b => {
+          const hay = [
+            b.bankDate, buildTimeStr(b.bankTime, b.bankSec),
+            b.name, normalizeName(b.name),
+            fmtNumber2(fromCents(b.amountCents)),
+            b.note || "", b.createdAt,
+            b.linkedReceiptId || ""
+          ].join(" ").toLowerCase();
+          return hay.includes(q);
+        });
+      }
+
+      if(filter !== "all"){
+        arr = arr.filter(b => {
+          const res = reconMap.get(b.id) || { status: "none" };
+          if(filter === "unmatched") return res.status === "none" || res.status === "linkedMissing" || res.status === "linkedMismatch";
+          if(filter === "matched") return res.status === "strong" || res.status === "weak" || res.status === "strongLinked" || res.status === "weakLinked";
+          if(filter === "unconfirmed") return !b.confirmed;
+          if(filter === "linked") return !!b.linkedReceiptId;
+          return true;
+        });
+      }
+
+      const sortMode = document.getElementById("b_sortMode").value;
+      arr.sort((a,b) => {
+        const ad = stampForSort(a.bankDate, a.bankTime || "00:00", a.bankSec);
+        const bd = stampForSort(b.bankDate, b.bankTime || "00:00", b.bankSec);
+        const ac = new Date(a.createdAt);
+        const bc = new Date(b.createdAt);
+        switch(sortMode){
+          case "date_asc": return ad - bd || ac - bc;
+          case "date_desc": return bd - ad || bc - ac;
+          case "amount_asc": return a.amountCents - b.amountCents || bd - ad;
+          case "amount_desc": return b.amountCents - a.amountCents || bd - ad;
+          case "created_asc": return ac - bc || ad - bd;
+          case "created_desc": return bc - ac || bd - ad;
+          default: return bd - ad || bc - ac;
+        }
+      });
+
+      return arr;
+    }
+
+    function bankMatchBadge(b, recon){
+      const isLinked = !!b.linkedReceiptId;
+      if(recon.status === "strongLinked") return `<span class="chip linked">Vinculado</span> <span class="chip matchStrong">Match forte</span>`;
+      if(recon.status === "weakLinked") return `<span class="chip linked">Vinculado</span> <span class="chip matchWeak">Revisar nome</span>`;
+      if(recon.status === "linkedMismatch") return `<span class="chip linked">Vinculado</span> <span class="chip noMatch">Vínculo inválido</span>`;
+      if(recon.status === "linkedMissing") return `<span class="chip linked">Vinculado</span> <span class="chip noMatch">Comprovante apagado</span>`;
+      if(recon.status === "strong") return `<span class="chip matchStrong">Match forte</span>${isLinked ? ` <span class="chip linked">Vinculado</span>` : ""}`;
+      if(recon.status === "weak") return `<span class="chip matchWeak">Possível (sem nome)</span>${isLinked ? ` <span class="chip linked">Vinculado</span>` : ""}`;
+      return isLinked ? `<span class="chip linked">Vinculado</span> <span class="chip noMatch">Sem match</span>` : `<span class="chip noMatch">Sem match</span>`;
+    }
+
+    function renderBankRow(b, reconMap){
+      const recon = reconMap.get(b.id) || { status: "none", candidates: [] };
+      const bankDT = humanDateTime(b.bankDate, b.bankTime, b.bankSec);
+      const created = new Date(b.createdAt);
+      const createdHuman = `${pad2(created.getDate())}/${pad2(created.getMonth()+1)}/${created.getFullYear()} ${pad2(created.getHours())}:${pad2(created.getMinutes())}`;
+
+      const note = (b.note || "").trim();
+      const noteHtml = note ? `<div class="muted small" style="margin-top:4px;">${esc(note)}</div>` : "";
+
+      const checked = b.confirmed ? "checked" : "";
+      const candidates = getCandidatesForBank(b);
+      const canPick = (candidates.length > 0) || !!b.linkedReceiptId;
+      const pickLabel = b.linkedReceiptId ? "Trocar vínculo" : (candidates.length > 1 ? "Vincular (escolher)" : "Vincular");
+
+      return `
+        <tr data-id="${esc(b.id)}">
+          <td class="nowrap"><div class="mono">${esc(bankDT || humanDate(b.bankDate))}</div></td>
+          <td><div style="font-weight:650;">${esc(b.name)}</div>${noteHtml}</td>
+          <td class="nowrap"><div class="mono" style="font-weight:750;">${esc(fmtNumber2(fromCents(b.amountCents)))}</div></td>
+          <td class="nowrap"><div class="mono">${esc(createdHuman)}</div></td>
+          <td class="nowrap">${bankMatchBadge(b, recon)}</td>
+          <td class="nowrap" style="text-align:right;">
+            <div class="checkCell">
+              ${canPick ? `<button class="btn-sm btn-primary" data-action="pickReceipt" type="button">${esc(pickLabel)}</button>` : ""}
+              <label class="pill" style="margin:0; cursor:pointer;">
+                <input data-action="toggleConfirm" type="checkbox" ${checked} />
+                Confirmado
+              </label>
+              <button class="btn-sm btn-danger" data-action="delBank" type="button">Apagar</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderBankTable(arr, reconMap){
+      return `
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="nowrap">Data/Hora (extrato)</th>
+                <th>Nome (extrato)</th>
+                <th class="nowrap">Valor</th>
+                <th class="nowrap">Registro</th>
+                <th>Conciliação</th>
+                <th class="nowrap" style="text-align:right;">Checklist</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${arr.map(b => renderBankRow(b, reconMap)).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function wireBankRowButtons(){
+      document.querySelectorAll('button[data-action="delBank"]').forEach(btn => {
+        btn.onclick = () => {
+          const tr = btn.closest("tr");
+          if(!tr) return;
+          deleteBank(tr.getAttribute("data-id"));
+        };
+      });
+      document.querySelectorAll('input[data-action="toggleConfirm"]').forEach(chk => {
+        chk.onchange = () => {
+          const tr = chk.closest("tr");
+          if(!tr) return;
+          const id = tr.getAttribute("data-id");
+          const b = bankEntries.find(x => x.id === id);
+          if(!b) return;
+          b.confirmed = !!chk.checked;
+          saveAll();
+        };
+      });
+      document.querySelectorAll('button[data-action="pickReceipt"]').forEach(btn => {
+        btn.onclick = () => {
+          const tr = btn.closest("tr");
+          if(!tr) return;
+          openPickReceipt(tr.getAttribute("data-id"));
+        };
+      });
+    }
+
+    function renderBankStats(reconMap){
+      const total = bankEntries.length;
+      let strong = 0, weak = 0, none = 0, linked = 0;
+      for(const b of bankEntries){
+        if(b.linkedReceiptId) linked++;
+        const r = reconMap.get(b.id) || { status: "none" };
+        if(r.status === "strong" || r.status === "strongLinked") strong++;
+        else if(r.status === "weak" || r.status === "weakLinked") weak++;
+        else none++;
+      }
+      const confirmed = bankEntries.filter(b => b.confirmed).length;
+      const sumCents = bankEntries.reduce((acc,b) => acc + (Number(b.amountCents) || 0), 0);
+
+      document.getElementById("b_statTotal").textContent = String(total);
+      document.getElementById("b_statSum").textContent = fmtNumber2(fromCents(sumCents));
+      document.getElementById("b_statStrong").textContent = String(strong);
+      document.getElementById("b_statWeak").textContent = String(weak);
+      document.getElementById("b_statNone").textContent = String(none);
+      document.getElementById("b_statConfirmed").textContent = String(confirmed);
+      document.getElementById("b_statLinked").textContent = String(linked);
+
+      updateBankBalanceUI();
+    }
+
+    function renderBank(){
+      const reconMap = reconcileAllBank();
+      renderBankStats(reconMap);
+      const listEl = document.getElementById("b_list");
+      const arr = getFilteredBank(reconMap);
+      if(arr.length === 0){
+        listEl.innerHTML = `<div class="hint">Nenhuma linha do extrato encontrada.</div>`;
+        return;
+      }
+      listEl.innerHTML = renderBankTable(arr, reconMap);
+      wireBankRowButtons();
+    }
+
+    // =========================
+    // USDT TAB RENDER
+    // =========================
+    function getUsdtDate(){ return document.getElementById("u_date").value || ""; }
+
+    function usdtRowKindBadge(kind){
+      if(kind === "unificado") return `<span class="chip linked">Unificado</span>`;
+      if(kind === "extrato") return `<span class="chip">Extrato</span>`;
+      return `<span class="chip">Comprovante</span>`;
+    }
+    function usdtRowName(name){
+      const t = String(name || "").trim();
+      return t ? esc(t) : `<span class="muted">(sem nome)</span>`;
+    }
+
+    function renderManualList(dateStr){
+      const el = document.getElementById("u_manualList");
+      const arr = getManualByDate(dateStr);
+      if(!dateStr){
+        el.innerHTML = `<div class="hint">Selecione uma data.</div>`;
+        return;
+      }
+      if(arr.length === 0){
+        el.innerHTML = `<div class="hint">Nenhuma compra manual registrada nesta data.</div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <div class="tableWrap">
+          <table style="min-width: 860px;">
+            <thead>
+              <tr>
+                <th class="nowrap">Registro</th>
+                <th>Obs</th>
+                <th class="nowrap">Valor (Fiat)</th>
+                <th class="nowrap">Custo USDT</th>
+                <th class="nowrap">USDT</th>
+                <th class="nowrap" style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${arr.map(m => {
+                const c = new Date(m.createdAt);
+                const ch = `${pad2(c.getDate())}/${pad2(c.getMonth()+1)}/${c.getFullYear()} ${pad2(c.getHours())}:${pad2(c.getMinutes())}`;
+                const price = fromMicros(m.priceMicros);
+                const usdt = (price && price>0) ? (fromCents(m.amountCents)/price) : null;
+                return `
+                  <tr data-mid="${esc(m.id)}">
+                    <td class="nowrap"><div class="mono">${esc(ch)}</div></td>
+                    <td>${esc(m.note || "")}</td>
+                    <td class="nowrap"><div class="mono" style="font-weight:750;">${esc(fmtNumber2(fromCents(m.amountCents)))}</div></td>
+                    <td class="nowrap"><div class="mono">${esc(m.priceText || (price?fmtPriceForInput(price):""))}</div></td>
+                    <td class="nowrap"><div class="mono" style="font-weight:750;">${usdt==null?"—":esc(fmtNumber4(usdt))}</div></td>
+                    <td class="nowrap" style="text-align:right;">
+                      <button class="btn-sm btn-danger" data-action="delManual" type="button">Apagar</button>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      el.querySelectorAll('button[data-action="delManual"]').forEach(btn => {
+        btn.onclick = () => {
+          const tr = btn.closest("tr");
+          if(!tr) return;
+          const id = tr.getAttribute("data-mid");
+          if(!id) return;
+          const ok = confirm("Apagar esta compra manual?");
+          if(!ok) return;
+          deleteManualPurchase(id);
+          renderAll();
+        };
+      });
+    }
+
+    function renderUsdt(){
+      const dateStr = getUsdtDate();
+      const listEl = document.getElementById("u_list");
+
+      // lista manual
+      renderManualList(dateStr);
+
+      if(!dateStr){
+        listEl.innerHTML = `<div class="hint">Selecione uma data.</div>`;
+        document.getElementById("u_sumFiatBought").textContent = "0,00";
+        document.getElementById("u_sumUsdt").textContent = "0,0000";
+        document.getElementById("u_avgPrice").textContent = "—";
+        document.getElementById("u_uncovered").textContent = "0,00";
+        return;
+      }
+
+      // IMPORTANTE:
+      // - consumo/estatística deve ser calculado com todos itens do dia (não depende da busca)
+      const itemsAll = getUnifiedUsdtItemsByDate(dateStr, "");
+      const itemsShown = getUnifiedUsdtItemsByDate(dateStr, document.getElementById("u_q").value);
+
+      const cov = computeCoverageForDate(dateStr, itemsAll);
+      const stats = computePurchaseStats(cov.purchases);
+
+      document.getElementById("u_sumFiatBought").textContent = fmtNumber2(fromCents(stats.sumFiatCents));
+      document.getElementById("u_sumUsdt").textContent = fmtNumber4(stats.sumUsdt);
+      document.getElementById("u_avgPrice").textContent = (stats.avgPrice == null) ? "—" : fmtPriceForInput(stats.avgPrice);
+      document.getElementById("u_uncovered").textContent = fmtNumber2(fromCents(cov.uncoveredCents));
+
+      if(itemsShown.length === 0){
+        listEl.innerHTML = `<div class="hint">Não há entradas nesta data (ou a busca filtrou tudo).</div>`;
+        return;
+      }
+
+      listEl.innerHTML = `
+        <div class="tableWrap">
+          <table style="min-width: 1240px;">
+            <thead>
+              <tr>
+                <th class="nowrap">Data/Hora + Origem</th>
+                <th>Nome</th>
+                <th class="nowrap">Valor (Fiat)</th>
+                <th class="nowrap">Custo por linha (opcional)</th>
+                <th class="nowrap">USDT (só se custo por linha)</th>
+                <th class="nowrap">Consumo (barra)</th>
+                <th class="nowrap" style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsShown.map(it => {
+                const key = `${it.targetType}_${it.targetId}`;
+                const amt = Number(it.amountCents)||0;
+                const cons = Number(cov.consumed.get(key) || 0);
+                const pct = (amt > 0) ? Math.max(0, Math.min(1, cons/amt)) : 0;
+                const pctStr = (pct*100).toFixed(2) + "%";
+
+                const priceInfo = getUsdtPrice(it.targetType, it.targetId);
+                const price = fromMicros(priceInfo.micros);
+                const inputValue = priceInfo.text ? esc(priceInfo.text) : (price != null ? esc(fmtPriceForInput(price)) : "");
+                const usdt = (price != null && price > 0) ? (fromCents(amt)/price) : null;
+
+                const refs = [ it.bankId ? `bank:${it.bankId}` : null, it.receiptId ? `rec:${it.receiptId}` : null ].filter(Boolean).join(" • ");
+                const note = String(it.note||"").trim();
+                const noteHtml = note ? `<div class="muted small">${esc(note)}</div>` : "";
+
+                // background bar "no fundo" (leve)
+                const rowBg = `linear-gradient(90deg, rgba(54,211,153,.14) 0%, rgba(54,211,153,.14) ${pctStr}, transparent ${pctStr}, transparent 100%)`;
+
+                return `
+                  <tr data-usdtkey="${esc(key)}" style="background:${rowBg};">
+                    <td class="nowrap">
+                      <div class="mono"><b>${esc(humanDate(it.date))}</b> ${esc(it.time||"")}</div>
+                      <div class="muted small mono">${usdtRowKindBadge(it.kind)} <span class="muted">•</span> ${esc(refs)}</div>
+                    </td>
+                    <td>
+                      <div style="font-weight:650;">${usdtRowName(it.name)}</div>
+                      ${noteHtml}
+                    </td>
+                    <td class="nowrap"><div class="mono" style="font-weight:750;">${esc(fmtNumber2(fromCents(amt)))}</div></td>
+
+                    <td class="nowrap">
+                      <input
+                        data-action="usdtPriceLine"
+                        data-targettype="${esc(it.targetType)}"
+                        data-targetid="${esc(it.targetId)}"
+                        type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        placeholder="Ex.: 5,55"
+                        value="${inputValue}"
+                        style="max-width: 170px;"
+                      />
+                      <div class="muted small mono">se preencher: compra por linha</div>
+                    </td>
+
+                    <td class="nowrap">
+                      <div class="mono" id="u_usdt_${esc(key)}" style="font-weight:750;">${usdt==null?"—":esc(fmtNumber4(usdt))}</div>
+                    </td>
+
+                    <td class="nowrap">
+                      <div class="mono small">${esc(fmtNumber2(fromCents(cons)))} / ${esc(fmtNumber2(fromCents(amt)))} (${(pct*100).toFixed(1)}%)</div>
+                      <div class="usdtCovLine"><div class="usdtCovFill" style="width:${pctStr};"></div></div>
+                    </td>
+
+                    <td class="nowrap" style="text-align:right;">
+                      <div class="rowBtns">
+                        <button class="btn-sm btn-danger" data-action="clearLineCost" data-targettype="${esc(it.targetType)}" data-targetid="${esc(it.targetId)}" type="button">Limpar custo</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      // Listener: custo por linha (não trava)
+      listEl.querySelectorAll('input[data-action="usdtPriceLine"]').forEach(inp => {
+        const targetType = inp.getAttribute("data-targettype");
+        const targetId = inp.getAttribute("data-targetid");
+        const key = `${targetType}_${targetId}`;
+
+        inp.addEventListener("input", () => {
+          setUsdtPrice(targetType, targetId, inp.value);
+
+          // atualizar apenas resumo + campo USDT da linha + barras (re-render do USDT é aceitável aqui pois não é contínuo? mas pode "pular")
+          // Para evitar travar, não re-renderiza completo: atualiza o valor USDT e o resumo; barras dependem de consumo -> precisa recomputar,
+          // mas podemos re-renderizar sem o input perder o foco porque mantemos o input existente. Então aqui apenas atualiza o resumo e o USDT.
+          const dateStr2 = getUsdtDate();
+          const itemsAll2 = getUnifiedUsdtItemsByDate(dateStr2, "");
+          const cov2 = computeCoverageForDate(dateStr2, itemsAll2);
+          const stats2 = computePurchaseStats(cov2.purchases);
+
+          document.getElementById("u_sumFiatBought").textContent = fmtNumber2(fromCents(stats2.sumFiatCents));
+          document.getElementById("u_sumUsdt").textContent = fmtNumber4(stats2.sumUsdt);
+          document.getElementById("u_avgPrice").textContent = (stats2.avgPrice == null) ? "—" : fmtPriceForInput(stats2.avgPrice);
+          document.getElementById("u_uncovered").textContent = fmtNumber2(fromCents(cov2.uncoveredCents));
+
+          // atualizar USDT da linha
+          const t = getTargetObject(targetType, targetId);
+          const price = fromMicros(t?.usdtPriceMicros);
+          const amt = (t && (targetType==="bank") ? t.amountCents : (t?.amountCents));
+          const usdt = (price && price>0) ? (fromCents(Number(amt)||0)/price) : null;
+          const elUsdt = document.getElementById(`u_usdt_${key}`);
+          if(elUsdt) elUsdt.textContent = (usdt==null) ? "—" : fmtNumber4(usdt);
+
+          updateBankBalanceUI();
+        });
+
+        inp.addEventListener("blur", () => {
+          const t = getTargetObject(targetType, targetId);
+          if(!t) return;
+          const n = parseDecimalLooseBR(t.usdtPriceText);
+          if(n != null){
+            const clean = fmtPriceForInput(n);
+            t.usdtPriceText = clean;
+            t.usdtPriceMicros = toMicros(n);
+            saveAll();
+            inp.value = clean;
+            updateBankBalanceUI();
+            renderUsdt(); // aqui pode re-renderizar quando sair do foco
+          }else{
+            // se apagou/invalidou, mantém texto como está
+            saveAll();
+            renderUsdt();
+          }
+        });
+      });
+
+      listEl.querySelectorAll('button[data-action="clearLineCost"]').forEach(btn => {
+        btn.onclick = () => {
+          const targetType = btn.getAttribute("data-targettype");
+          const targetId = btn.getAttribute("data-targetid");
+          const t = getTargetObject(targetType, targetId);
+          if(!t) return;
+          t.usdtPriceMicros = null;
+          t.usdtPriceText = "";
+          saveAll();
+          updateBankBalanceUI();
+          renderUsdt();
+        };
+      });
+    }
+
+    // =========================
+    // PICK DIALOG (VINCULAR) + MIGRAÇÃO DE CUSTO USDT
+    // =========================
+    const dlgPick = document.getElementById("dlgPickReceipt");
+    const pickListEl = document.getElementById("pickList");
+    const pickEmptyEl = document.getElementById("pickEmpty");
+    const pickSearchEl = document.getElementById("pickSearch");
+    const pickBankSummaryEl = document.getElementById("pickBankSummary");
+
+    function closePick(){
+      pickingBankId = null;
+      pickSearchEl.value = "";
+      pickListEl.innerHTML = "";
+      pickEmptyEl.style.display = "none";
+      if(dlgPick.open) dlgPick.close();
+    }
+    document.getElementById("btnClosePick").onclick = closePick;
+    document.getElementById("btnClosePick2").onclick = closePick;
+
+    document.getElementById("btnUnlink").onclick = () => {
+      if(!pickingBankId) return;
+      const b = bankEntries.find(x => x.id === pickingBankId);
+      if(!b) return;
+      b.linkedReceiptId = null;
+      saveAll();
+      renderAll();
+      closePick();
+    };
+
+    function renderPickList(){
+      if(!pickingBankId) return;
+      const b = bankEntries.find(x => x.id === pickingBankId);
+      if(!b) return;
+
+      const candidates = getCandidatesForBank(b);
+      const q = pickSearchEl.value.trim().toLowerCase();
+
+      const filtered = candidates.filter(r => {
+        const hay = [
+          r.transferDate, buildTimeStr(r.transferTime, r.transferSec),
+          r.name, normalizeName(r.name),
+          fmtNumber2(fromCents(r.amountCents)),
+          r.note || "", r.id
+        ].join(" ").toLowerCase();
+        return q ? hay.includes(q) : true;
+      });
+
+      if(filtered.length === 0){
+        pickListEl.innerHTML = "";
+        pickEmptyEl.style.display = "block";
+        return;
+      }
+
+      pickEmptyEl.style.display = "none";
+      pickListEl.innerHTML = filtered.map(r => {
+        const isCurrent = (b.linkedReceiptId && b.linkedReceiptId === r.id);
+        const name = (r.name || "").trim() ? esc(r.name) : `<span class="muted">(sem nome)</span>`;
+        const note = (r.note || "").trim() ? `<div class="muted small">${esc(r.note)}</div>` : "";
+        const cls = isCurrent ? "pickItem hl" : "pickItem";
+
+        return `
+          <div class="${cls}">
+            <div class="pickMeta">
+              <div class="mono"><b>${esc(humanDateTime(r.transferDate, r.transferTime, r.transferSec))}</b> • ${esc(fmtNumber2(fromCents(r.amountCents)))}</div>
+              <div>${name} <span class="muted small">• id=${esc(r.id)}</span></div>
+              ${note}
+            </div>
+            <div class="pickActions">
+              ${isCurrent ? `<span class="chip linked">Atual</span>` : ""}
+              <button class="btn-sm btn-primary" type="button" data-action="selectReceipt" data-rid="${esc(r.id)}">Selecionar</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      pickListEl.querySelectorAll('button[data-action="selectReceipt"]').forEach(btn => {
+        btn.onclick = () => {
+          const rid = btn.getAttribute("data-rid");
+          if(!rid || !pickingBankId) return;
+
+          const b = bankEntries.find(x => x.id === pickingBankId);
+          const r = receipts.find(x => x.id === rid);
+          if(!b || !r) return;
+
+          // migra custo por linha do comprovante para o extrato (se extrato não tiver)
+          if((b.usdtPriceMicros == null || b.usdtPriceMicros <= 0) && (r.usdtPriceMicros != null && r.usdtPriceMicros > 0)){
+            b.usdtPriceMicros = r.usdtPriceMicros;
+            b.usdtPriceText = r.usdtPriceText || "";
+            r.usdtPriceMicros = null;
+            r.usdtPriceText = "";
+          }
+
+          b.linkedReceiptId = rid;
+          saveAll();
+          renderAll();
+          closePick();
+        };
+      });
+    }
+
+    function openPickReceipt(bankId){
+      const b = bankEntries.find(x => x.id === bankId);
+      if(!b) return;
+      pickingBankId = bankId;
+
+      const bankSummary = `${humanDateTime(b.bankDate, b.bankTime, b.bankSec)} | ${b.name} | ${fmtNumber2(fromCents(b.amountCents))} | id=${b.id}`;
+      pickBankSummaryEl.textContent = bankSummary;
+
+      document.getElementById("btnUnlink").style.display = b.linkedReceiptId ? "inline-flex" : "none";
+
+      dlgPick.showModal();
+      renderPickList();
+      pickSearchEl.focus();
+    }
+    pickSearchEl.addEventListener("input", renderPickList);
+
+    // =========================
+    // COMPROVANTES: ACTIONS
+    // =========================
+    function setReceiptError(msg){
+      const el = document.getElementById("r_formError");
+      if(!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+
+    function clearReceiptForm(){
+      setReceiptError("");
+      document.getElementById("frmReceipt").reset();
+      const d = new Date();
+      document.getElementById("r_transferDate").value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+      document.getElementById("r_transferTime").value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      document.getElementById("r_transferSec").value = "";
+      document.getElementById("r_name").value = "";
+      document.getElementById("r_amount").value = "";
+      document.getElementById("r_note").value = "";
+      updateAmountPreview(document.getElementById("r_amount"), document.getElementById("r_amountPreview"));
+      document.getElementById("r_name").focus();
+    }
+
+    function collectReceiptForm(){
+      const transferDate = document.getElementById("r_transferDate").value;
+      const transferTime = document.getElementById("r_transferTime").value;
+      const transferSec = normalizeSeconds(document.getElementById("r_transferSec").value);
+      const name = document.getElementById("r_name").value.trim();
+      const amountStr = document.getElementById("r_amount").value;
+      const note = document.getElementById("r_note").value.trim();
+
+      if(!transferDate) throw new Error("Informe a data da transferência.");
+      if(!transferTime) throw new Error("Informe a hora da transferência (HH:MM).");
+      if(amountStr === "" || amountStr == null) throw new Error("Informe o valor.");
+      const amountCents = toCents(amountStr);
+      if(amountCents < 0) throw new Error("O valor não pode ser negativo.");
+
+      return {
+        id: uid(),
+        transferDate, transferTime, transferSec,
+        name, amountCents, note,
+        createdAt: nowISO(),
+        dupExactOf: null, dupPossibleOf: null,
+        usdtPriceMicros: null,
+        usdtPriceText: ""
+      };
+    }
+
+    const dlgDup = document.getElementById("dlgDup");
+    function openDupDialog(newRec, info){
+      pendingReceiptAdd = newRec;
+      pendingDupInfo = info;
+
+      const newLine = `${humanDateTime(newRec.transferDate, newRec.transferTime, newRec.transferSec)} | ${newRec.name || "(sem nome)"} | ${fmtNumber2(fromCents(newRec.amountCents))}`;
+      const e = info.existing;
+      const oldLine = `${humanDateTime(e.transferDate, e.transferTime, e.transferSec)} | ${e.name || "(sem nome)"} | ${fmtNumber2(fromCents(e.amountCents))} | id=${e.id}`;
+
+      if(info.type === "exact"){
+        document.getElementById("dupTitle").textContent = "Duplicado EXATO detectado";
+        document.getElementById("dupReason").textContent = "Existe um registro com os mesmos dados: Data + Hora (+Seg) + Valor + Nome.";
+      }else{
+        document.getElementById("dupTitle").textContent = "Possível duplicado (Valor)";
+        document.getElementById("dupReason").textContent = "Existe um registro com a mesma Data + Hora e o mesmo Valor, mesmo que o nome esteja vazio/diferente.";
+      }
+
+      document.getElementById("dupNew").textContent = newLine;
+      document.getElementById("dupOld").textContent = oldLine;
+      dlgDup.showModal();
+    }
+    function closeDupDialog(){
+      pendingReceiptAdd = null;
+      pendingDupInfo = null;
+      if(dlgDup.open) dlgDup.close();
+    }
+    document.getElementById("btnCloseDup").onclick = closeDupDialog;
+    document.getElementById("btnCancelDup").onclick = closeDupDialog;
+    document.getElementById("btnForceSave").onclick = () => {
+      if(!pendingReceiptAdd) return;
+      receipts.push(pendingReceiptAdd);
+      recalcReceiptDuplicates();
+      saveAll();
+      renderAll();
+      closeDupDialog();
+      clearReceiptForm();
+    };
+
+    function deleteReceipt(id){
+      const r = receipts.find(x => x.id === id);
+      if(!r) return;
+      const ok = confirm(
+        "Apagar este comprovante?\n\n" +
+        `Transferência: ${humanDateTime(r.transferDate, r.transferTime, r.transferSec)}\n` +
+        `Nome: ${r.name || "(sem nome)"}\n` +
+        `Valor: ${fmtNumber2(fromCents(r.amountCents))}\n`
+      );
+      if(!ok) return;
+
+      receipts = receipts.filter(x => x.id !== id);
+      recalcReceiptDuplicates();
+      for(const b of bankEntries){
+        if(b.linkedReceiptId === id) b.linkedReceiptId = null;
+      }
+      saveAll();
+      renderAll();
+    }
+
+    // =========================
+    // EXTRATO: ACTIONS
+    // =========================
+    function setBankError(msg){
+      const el = document.getElementById("b_formError");
+      if(!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+
+    function clearBankForm(){
+      setBankError("");
+      document.getElementById("frmBank").reset();
+      const d = new Date();
+      document.getElementById("b_date").value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+      document.getElementById("b_time").value = "";
+      document.getElementById("b_sec").value = "";
+      document.getElementById("b_name").value = "";
+      document.getElementById("b_amount").value = "";
+      document.getElementById("b_note").value = "";
+      updateAmountPreview(document.getElementById("b_amount"), document.getElementById("b_amountPreview"));
+      document.getElementById("b_name").focus();
+    }
+
+    function collectBankForm(){
+      const bankDate = document.getElementById("b_date").value;
+      const bankTime = document.getElementById("b_time").value;
+      const bankSec = normalizeSeconds(document.getElementById("b_sec").value);
+      const name = document.getElementById("b_name").value.trim();
+      const amountStr = document.getElementById("b_amount").value;
+      const note = document.getElementById("b_note").value.trim();
+
+      if(!bankDate) throw new Error("Informe a data do extrato.");
+      if(!name) throw new Error("Informe o nome/descrição do extrato.");
+      if(amountStr === "" || amountStr == null) throw new Error("Informe o valor.");
+      const amountCents = toCents(amountStr);
+      if(amountCents < 0) throw new Error("O valor não pode ser negativo.");
+
+      return {
+        id: uid(),
+        bankDate, bankTime, bankSec,
+        name, amountCents, note,
+        createdAt: nowISO(),
+        confirmed: false,
+        linkedReceiptId: null,
+        usdtPriceMicros: null,
+        usdtPriceText: ""
+      };
+    }
+
+    function deleteBank(id){
+      const b = bankEntries.find(x => x.id === id);
+      if(!b) return;
+      const ok = confirm(
+        "Apagar esta linha do extrato?\n\n" +
+        `Data: ${humanDateTime(b.bankDate, b.bankTime, b.bankSec)}\n` +
+        `Nome: ${b.name}\n` +
+        `Valor: ${fmtNumber2(fromCents(b.amountCents))}\n`
+      );
+      if(!ok) return;
+
+      bankEntries = bankEntries.filter(x => x.id !== id);
+      saveAll();
+      renderAll();
+    }
+
+    // =========================
+    // WIPE ALL
+    // =========================
+    document.getElementById("btnWipeAll").onclick = () => {
+      if(receipts.length === 0 && bankEntries.length === 0 && manualPurchases.length === 0){
+        alert("Não há registros para apagar.");
+        return;
+      }
+      const ok = confirm("Tem certeza que deseja apagar TUDO (comprovantes + extrato + USDT manual)? Essa ação não pode ser desfeita.");
+      if(!ok) return;
+
+      receipts = [];
+      bankEntries = [];
+      manualPurchases = [];
+      saveAll();
+      renderAll();
+      clearReceiptForm();
+      clearBankForm();
+      closePick();
+      closeDupDialog();
+    };
+
+    // =========================
+    // TAB SWITCH
+    // =========================
+    function setActiveTab(which){
+      const btnR = document.getElementById("tabBtnReceipts");
+      const btnB = document.getElementById("tabBtnBank");
+      const btnU = document.getElementById("tabBtnUsdt");
+      const panelR = document.getElementById("tabReceipts");
+      const panelB = document.getElementById("tabBank");
+      const panelU = document.getElementById("tabUsdt");
+
+      btnR.classList.remove("active");
+      btnB.classList.remove("active");
+      btnU.classList.remove("active");
+      panelR.classList.remove("active");
+      panelB.classList.remove("active");
+      panelU.classList.remove("active");
+
+      if(which === "bank"){
+        btnB.classList.add("active");
+        panelB.classList.add("active");
+      }else if(which === "usdt"){
+        btnU.classList.add("active");
+        panelU.classList.add("active");
+        renderUsdt();
+      }else{
+        btnR.classList.add("active");
+        panelR.classList.add("active");
+      }
+    }
+    document.getElementById("tabBtnReceipts").onclick = () => setActiveTab("receipts");
+    document.getElementById("tabBtnBank").onclick = () => setActiveTab("bank");
+    document.getElementById("tabBtnUsdt").onclick = () => setActiveTab("usdt");
+
+    // =========================
+    // EVENTS
+    // =========================
+    document.getElementById("frmReceipt").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      try{
+        setReceiptError("");
+        const rec = collectReceiptForm();
+        recalcReceiptDuplicates();
+        const info = findExistingReceiptForAlert(rec);
+        if(info){ openDupDialog(rec, info); return; }
+        receipts.push(rec);
+        recalcReceiptDuplicates();
+        saveAll();
+        renderAll();
+        clearReceiptForm();
+      }catch(err){
+        setReceiptError(String(err.message || err));
+      }
+    });
+    document.getElementById("r_btnClear").onclick = clearReceiptForm;
+
+    document.getElementById("r_q").addEventListener("input", renderReceipts);
+    document.getElementById("r_sortMode").addEventListener("change", renderReceipts);
+    document.getElementById("r_groupMode").addEventListener("change", renderReceipts);
+    document.getElementById("r_onlyAlerts").addEventListener("change", renderReceipts);
+
+    document.getElementById("r_btnRecheck").onclick = () => {
+      recalcReceiptDuplicates();
+      saveAll();
+      renderAll();
+      alert("Alertas de duplicidade (comprovantes) recalculados.");
+    };
+
+    document.getElementById("r_amount").addEventListener("input", () =>
+      updateAmountPreview(document.getElementById("r_amount"), document.getElementById("r_amountPreview"))
+    );
+
+    document.getElementById("frmBank").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      try{
+        setBankError("");
+        const b = collectBankForm();
+        bankEntries.push(b);
+        saveAll();
+        renderAll();
+        clearBankForm();
+      }catch(err){
+        setBankError(String(err.message || err));
+      }
+    });
+    document.getElementById("b_btnClear").onclick = clearBankForm;
+
+    document.getElementById("b_q").addEventListener("input", renderBank);
+    document.getElementById("b_filter").addEventListener("change", renderBank);
+    document.getElementById("b_sortMode").addEventListener("change", renderBank);
+    document.getElementById("b_btnReconcile").onclick = () => { renderBank(); alert("Conciliação recalculada."); };
+
+    document.getElementById("b_amount").addEventListener("input", () =>
+      updateAmountPreview(document.getElementById("b_amount"), document.getElementById("b_amountPreview"))
+    );
+
+    document.getElementById("u_date").addEventListener("change", renderUsdt);
+    document.getElementById("u_q").addEventListener("input", renderUsdt);
+
+    // Manual purchase form
+    function setManualError(msg){
+      const el = document.getElementById("u_manualError");
+      if(!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+    function clearManualForm(){
+      setManualError("");
+      document.getElementById("frmManualUsdt").reset();
+      updateAmountPreview(document.getElementById("u_manualAmount"), document.getElementById("u_manualAmountPreview"));
+      document.getElementById("u_manualAmount").focus();
+    }
+    document.getElementById("u_btnManualClear").onclick = clearManualForm;
+    document.getElementById("u_manualAmount").addEventListener("input", () =>
+      updateAmountPreview(document.getElementById("u_manualAmount"), document.getElementById("u_manualAmountPreview"))
+    );
+    document.getElementById("frmManualUsdt").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      try{
+        setManualError("");
+        const dateStr = getUsdtDate();
+        const amountCents = toCents(document.getElementById("u_manualAmount").value);
+        const priceText = document.getElementById("u_manualPrice").value;
+        const note = document.getElementById("u_manualNote").value;
+        addManualPurchase(dateStr, amountCents, priceText, note);
+        clearManualForm();
+        renderAll();
+      }catch(err){
+        setManualError(String(err.message || err));
+      }
+    });
+
+    // =========================
+    // DIALOG DUP CLOSE
+    // =========================
+    function closeDupDialog(){
+      pendingReceiptAdd = null;
+      pendingDupInfo = null;
+      if(dlgDup.open) dlgDup.close();
+    }
+
+    // =========================
+    // PICK SEARCH
+    // =========================
+    pickSearchEl.addEventListener("input", renderPickList);
+
+    // =========================
+    // RENDER ALL
+    // =========================
+    function renderAll(){
+      renderReceipts();
+      renderBank();
+      renderUsdt();
+    }
+
+    // =========================
+    // INIT
+    // =========================
+    (function init(){
+      loadAll();
+      recalcReceiptDuplicates();
+      saveAll();
+
+      clearReceiptForm();
+      clearBankForm();
+      clearManualForm();
+
+      const d = new Date();
+      document.getElementById("u_date").value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
