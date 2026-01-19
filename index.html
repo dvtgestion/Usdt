@@ -214,6 +214,25 @@
       background: rgba(54,211,153,.55);
       width: 0%;
     }
+    
+    /* ✅ FIX DEFINITIVO: pills de resumo do extrato (valores grandes não cortam) */
+.pill.pillStat{
+  white-space: normal !important;   /* mata o nowrap da .pill */
+  min-width: 0 !important;
+}
+
+.pill.pillStat > span:first-child{
+  min-width: 0 !important;
+  flex: 1 1 auto !important;        /* texto da esquerda pode encolher */
+}
+
+.pill.pillStat > span:last-child{
+  flex: 0 0 auto !important;        /* valor mantém tamanho */
+  text-align: right !important;
+  max-width: 55% !important;        /* evita estourar */
+  overflow-wrap: anywhere !important;
+  word-break: break-all !important; /* quebra número se precisar */
+}
   </style>
 </head>
 
