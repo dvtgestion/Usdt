@@ -1,3 +1,6 @@
+<!-- =========================
+PARTE 1/2 (COLE PRIMEIRO)
+========================= -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -249,6 +252,8 @@
           <button class="tabBtn active" id="tabBtnReceipts" type="button">Comprovantes</button>
           <button class="tabBtn" id="tabBtnBank" type="button">Extrato (interno)</button>
           <button class="tabBtn" id="tabBtnUsdt" type="button">USDT</button>
+          <!-- ✅ NOVA ABA -->
+          <button class="tabBtn" id="tabBtnGastos" type="button">Gastos</button>
         </div>
       </div>
     </header>
@@ -501,6 +506,13 @@
 </div>
 <div style="height:8px"></div>
 
+<!-- ✅ NOVO: TOTAL GASTOS OPERACIONAIS -->
+<div class="pill pillStat" style="justify-content:space-between; width:100%;">
+  <span><span class="dot warn"></span> Total gastos operacionais (saída)</span>
+  <span id="b_statOpSpent" class="mono">0,00</span>
+</div>
+<div style="height:8px"></div>
+
 <div class="pill pillStat" style="justify-content:space-between; width:100%;">
   <span><span class="dot ok"></span> Saldo (entradas - saídas)</span>
   <span id="b_statBalance" class="mono">0,00</span>
@@ -666,6 +678,74 @@
         </section>
       </div>
     </div>
+
+    <!-- =========================
+    ✅ NOVA ABA: GASTOS
+    ========================= -->
+    <div class="tabPanel" id="tabGastos">
+      <div class="grid">
+        <section class="card" aria-label="Registrar gasto operacional">
+          <div class="hd">
+            <h2>Registrar gasto operacional</h2>
+            <span class="pill"><span class="dot warn"></span> Desconta do saldo do extrato</span>
+          </div>
+          <div class="bd">
+            <form id="frmExpense">
+              <div class="row3">
+                <label>Data do gasto
+                  <input id="e_date" type="date" required />
+                </label>
+                <label>Descrição
+                  <input id="e_name" type="text" placeholder="Ex.: aluguel, internet, gasolina..." maxlength="120" required />
+                </label>
+                <label>Valor
+                  <input id="e_amount" type="number" step="0.01" min="0" placeholder="Ex.: 150.00" required />
+                  <div id="e_amountPreview" class="muted small mono">Formato: 0,00</div>
+                </label>
+              </div>
+
+              <label>Observação (opcional)
+                <textarea id="e_note" placeholder="Detalhes..."></textarea>
+              </label>
+
+              <div class="actions">
+                <button type="button" id="e_btnClear" class="btn-sm">Limpar</button>
+                <button type="submit" class="btn-primary">Salvar gasto</button>
+              </div>
+
+              <div id="e_formError" class="error"></div>
+            </form>
+
+            <div class="footerNote">Tudo fica salvo somente neste navegador/dispositivo.</div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="Lista de gastos">
+          <div class="hd">
+            <h2>Gastos (histórico)</h2>
+            <span class="pill"><span class="dot"></span> Local</span>
+          </div>
+          <div class="bd">
+            <div class="toolbar" style="margin-bottom:10px;">
+              <div class="left">
+                <label style="min-width: 240px;">Buscar
+                  <input id="e_q" type="text" placeholder="Descrição, valor, data, observação..." />
+                </label>
+              </div>
+            </div>
+
+            <div class="pill" style="justify-content:space-between; width:100%;">
+              <span><span class="dot warn"></span> Total gastos (soma)</span>
+              <span id="e_statSum" class="mono">0,00</span>
+            </div>
+
+            <div style="height:10px;"></div>
+            <div id="e_list"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
   </div>
 
   <!-- DIALOG: ALERTA DUPLICADO (COMPROVANTES) -->
@@ -864,6 +944,9 @@
     let bankEntries = [];
     let manualPurchases = []; // compras manuais de USDT (por data)
 
+    // ✅ NOVO: gastos operacionais
+    let expenses = [];
+
     let pendingReceiptAdd = null;
     let pendingDupInfo = null;
 
@@ -873,7 +956,7 @@
     // LOAD / SAVE
     // =========================
     function saveAll(){
-      localStorage.setItem(LS_KEY, JSON.stringify({ receipts, bankEntries, manualPurchases }));
+      localStorage.setItem(LS_KEY, JSON.stringify({ receipts, bankEntries, manualPurchases, expenses }));
     }
 
     function coerceReceipt(x){
@@ -924,6 +1007,18 @@
       };
     }
 
+    // ✅ NOVO: COERCE EXPENSE
+    function coerceExpense(x){
+      return {
+        id: String(x.id || uid()),
+        date: String(x.date || ""),
+        name: String(x.name || ""),
+        amountCents: Number.isFinite(Number(x.amountCents)) ? Number(x.amountCents) : toCents(x.amount || 0),
+        note: String(x.note || ""),
+        createdAt: String(x.createdAt || nowISO())
+      };
+    }
+
     function loadAll(){
       try{
         const raw = localStorage.getItem(LS_KEY);
@@ -932,12 +1027,14 @@
           receipts = Array.isArray(parsed.receipts) ? parsed.receipts.map(coerceReceipt) : [];
           bankEntries = Array.isArray(parsed.bankEntries) ? parsed.bankEntries.map(coerceBank) : [];
           manualPurchases = Array.isArray(parsed.manualPurchases) ? parsed.manualPurchases.map(coerceManual) : [];
+          expenses = Array.isArray(parsed.expenses) ? parsed.expenses.map(coerceExpense) : [];
           return;
         }
       }catch(e){ /* ignore */ }
       receipts = [];
       bankEntries = [];
       manualPurchases = [];
+      expenses = [];
       saveAll();
     }
 
@@ -1241,20 +1338,153 @@
     }
 
     // =========================
-    // SALDO DO EXTRATO (Entradas - Compras USDT)
+    // ✅ GASTOS OPERACIONAIS (CRUD + RENDER)
+    // =========================
+    function setExpenseError(msg){
+      const el = document.getElementById("e_formError");
+      if(!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+
+    function clearExpenseForm(){
+      setExpenseError("");
+      document.getElementById("frmExpense").reset();
+      const d = new Date();
+      document.getElementById("e_date").value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+      document.getElementById("e_name").value = "";
+      document.getElementById("e_amount").value = "";
+      document.getElementById("e_note").value = "";
+      updateAmountPreview(document.getElementById("e_amount"), document.getElementById("e_amountPreview"));
+      document.getElementById("e_name").focus();
+    }
+
+    function collectExpenseForm(){
+      const date = document.getElementById("e_date").value;
+      const name = document.getElementById("e_name").value.trim();
+      const amountStr = document.getElementById("e_amount").value;
+      const note = document.getElementById("e_note").value.trim();
+
+      if(!date) throw new Error("Informe a data do gasto.");
+      if(!name) throw new Error("Informe a descrição do gasto.");
+      if(amountStr === "" || amountStr == null) throw new Error("Informe o valor do gasto.");
+
+      const amountCents = toCents(amountStr);
+      if(amountCents <= 0) throw new Error("O valor do gasto deve ser maior que zero.");
+
+      return {
+        id: uid(),
+        date,
+        name,
+        amountCents,
+        note,
+        createdAt: nowISO()
+      };
+    }
+
+    function deleteExpense(id){
+      const e = expenses.find(x => x.id === id);
+      if(!e) return;
+      const ok = confirm(
+        "Apagar este gasto?\n\n" +
+        `Data: ${humanDate(e.date)}\n` +
+        `Descrição: ${e.name}\n` +
+        `Valor: ${fmtNumber2(fromCents(e.amountCents))}\n`
+      );
+      if(!ok) return;
+
+      expenses = expenses.filter(x => x.id !== id);
+      saveAll();
+      renderAll();
+    }
+
+    function renderExpenses(){
+      const listEl = document.getElementById("e_list");
+      if(!listEl) return;
+
+      const q = document.getElementById("e_q").value.trim().toLowerCase();
+
+      let arr = [...expenses].sort((a,b) => {
+        const ad = new Date((a.date||"1970-01-01") + "T00:00:00");
+        const bd = new Date((b.date||"1970-01-01") + "T00:00:00");
+        return bd - ad || (new Date(b.createdAt) - new Date(a.createdAt));
+      });
+
+      if(q){
+        arr = arr.filter(e => {
+          const hay = [
+            e.date, humanDate(e.date),
+            e.name, normalizeName(e.name),
+            fmtNumber2(fromCents(e.amountCents)),
+            e.note || "",
+            e.createdAt || ""
+          ].join(" ").toLowerCase();
+          return hay.includes(q);
+        });
+      }
+
+      const sumCents = arr.reduce((acc,e)=>acc + (Number(e.amountCents)||0), 0);
+      document.getElementById("e_statSum").textContent = fmtNumber2(fromCents(sumCents));
+
+      if(arr.length === 0){
+        listEl.innerHTML = `<div class="hint">Nenhum gasto registrado.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = `
+        <div class="tableWrap">
+          <table style="min-width: 980px;">
+            <thead>
+              <tr>
+                <th class="nowrap">Data</th>
+                <th>Descrição</th>
+                <th class="nowrap">Valor</th>
+                <th>Obs</th>
+                <th class="nowrap" style="text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${arr.map(e => `
+                <tr data-eid="${esc(e.id)}">
+                  <td class="nowrap"><div class="mono">${esc(humanDate(e.date))}</div></td>
+                  <td><div style="font-weight:650;">${esc(e.name)}</div></td>
+                  <td class="nowrap"><div class="mono" style="font-weight:750;">${esc(fmtNumber2(fromCents(e.amountCents)))}</div></td>
+                  <td>${esc(e.note || "")}</td>
+                  <td class="nowrap" style="text-align:right;">
+                    <button class="btn-sm btn-danger" data-action="delExpense" type="button">Apagar</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      listEl.querySelectorAll('button[data-action="delExpense"]').forEach(btn => {
+        btn.onclick = () => {
+          const tr = btn.closest("tr");
+          if(!tr) return;
+          deleteExpense(tr.getAttribute("data-eid"));
+        };
+      });
+    }
+
+    // =========================
+    // SALDO DO EXTRATO (Entradas - Compras USDT - Gastos Operacionais)
     // Agora inclui:
     // - compras por linha (extrato/comprovante sem vínculo)
     // - compras manuais
+    // - gastos operacionais
     // =========================
     function computeBalance(){
       const inflowCents = bankEntries.reduce((acc,b) => acc + (Number(b.amountCents)||0), 0);
 
-      let spentCents = 0;
+      let usdtSpentCents = 0;
 
       // saídas por custo por linha no extrato
       for(const b of bankEntries){
         if(b.usdtPriceMicros != null && Number(b.usdtPriceMicros) > 0){
-          spentCents += (Number(b.amountCents)||0);
+          usdtSpentCents += (Number(b.amountCents)||0);
         }
       }
 
@@ -1263,21 +1493,29 @@
       for(const r of receipts){
         if(linkedReceiptIds.has(r.id)) continue;
         if(r.usdtPriceMicros != null && Number(r.usdtPriceMicros) > 0){
-          spentCents += (Number(r.amountCents)||0);
+          usdtSpentCents += (Number(r.amountCents)||0);
         }
       }
 
       // saídas por compras manuais
       for(const m of manualPurchases){
-        spentCents += (Number(m.amountCents)||0);
+        usdtSpentCents += (Number(m.amountCents)||0);
       }
 
-      return { inflowCents, spentCents, balanceCents: inflowCents - spentCents };
+      // ✅ NOVO: gastos operacionais
+      let opSpentCents = 0;
+      for(const e of expenses){
+        opSpentCents += (Number(e.amountCents)||0);
+      }
+
+      const spentCents = usdtSpentCents + opSpentCents;
+      return { inflowCents, spentCents, usdtSpentCents, opSpentCents, balanceCents: inflowCents - spentCents };
     }
 
     function updateBankBalanceUI(){
       const bal = computeBalance();
-      document.getElementById("b_statUsdtSpent").textContent = fmtNumber2(fromCents(bal.spentCents));
+      document.getElementById("b_statUsdtSpent").textContent = fmtNumber2(fromCents(bal.usdtSpentCents));
+      document.getElementById("b_statOpSpent").textContent = fmtNumber2(fromCents(bal.opSpentCents));
       document.getElementById("b_statBalance").textContent = fmtNumber2(fromCents(bal.balanceCents));
       const hint = document.getElementById("b_statBalanceHint");
       if(bal.balanceCents < 0){
@@ -1287,6 +1525,11 @@
       }
     }
 
+    /* ====== CONTINUA NA PARTE 2/2 ====== */
+    
+    <!-- =========================
+PARTE 2/2 (COLE DEPOIS DA PARTE 1)
+========================= -->
     // =========================
     // RENDER: COMPROVANTES
     // =========================
@@ -1886,9 +2129,6 @@
         inp.addEventListener("input", () => {
           setUsdtPrice(targetType, targetId, inp.value);
 
-          // atualizar apenas resumo + campo USDT da linha + barras (re-render do USDT é aceitável aqui pois não é contínuo? mas pode "pular")
-          // Para evitar travar, não re-renderiza completo: atualiza o valor USDT e o resumo; barras dependem de consumo -> precisa recomputar,
-          // mas podemos re-renderizar sem o input perder o foco porque mantemos o input existente. Então aqui apenas atualiza o resumo e o USDT.
           const dateStr2 = getUsdtDate();
           const itemsAll2 = getUnifiedUsdtItemsByDate(dateStr2, "");
           const cov2 = computeCoverageForDate(dateStr2, itemsAll2);
@@ -1921,9 +2161,8 @@
             saveAll();
             inp.value = clean;
             updateBankBalanceUI();
-            renderUsdt(); // aqui pode re-renderizar quando sair do foco
+            renderUsdt();
           }else{
-            // se apagou/invalidou, mantém texto como está
             saveAll();
             renderUsdt();
           }
@@ -2238,7 +2477,7 @@
     // WIPE ALL
     // =========================
     document.getElementById("btnWipeAll").onclick = () => {
-      if(receipts.length === 0 && bankEntries.length === 0 && manualPurchases.length === 0){
+      if(receipts.length === 0 && bankEntries.length === 0 && manualPurchases.length === 0 && expenses.length === 0){
         alert("Não há registros para apagar.");
         return;
       }
@@ -2248,10 +2487,13 @@
       receipts = [];
       bankEntries = [];
       manualPurchases = [];
+      expenses = [];
       saveAll();
       renderAll();
       clearReceiptForm();
       clearBankForm();
+      clearManualForm();
+      clearExpenseForm();
       closePick();
       closeDupDialog();
     };
@@ -2263,16 +2505,20 @@
       const btnR = document.getElementById("tabBtnReceipts");
       const btnB = document.getElementById("tabBtnBank");
       const btnU = document.getElementById("tabBtnUsdt");
+      const btnG = document.getElementById("tabBtnGastos");
       const panelR = document.getElementById("tabReceipts");
       const panelB = document.getElementById("tabBank");
       const panelU = document.getElementById("tabUsdt");
+      const panelG = document.getElementById("tabGastos");
 
       btnR.classList.remove("active");
       btnB.classList.remove("active");
       btnU.classList.remove("active");
+      btnG.classList.remove("active");
       panelR.classList.remove("active");
       panelB.classList.remove("active");
       panelU.classList.remove("active");
+      panelG.classList.remove("active");
 
       if(which === "bank"){
         btnB.classList.add("active");
@@ -2281,6 +2527,10 @@
         btnU.classList.add("active");
         panelU.classList.add("active");
         renderUsdt();
+      }else if(which === "gastos"){
+        btnG.classList.add("active");
+        panelG.classList.add("active");
+        renderExpenses();
       }else{
         btnR.classList.add("active");
         panelR.classList.add("active");
@@ -2289,6 +2539,7 @@
     document.getElementById("tabBtnReceipts").onclick = () => setActiveTab("receipts");
     document.getElementById("tabBtnBank").onclick = () => setActiveTab("bank");
     document.getElementById("tabBtnUsdt").onclick = () => setActiveTab("usdt");
+    document.getElementById("tabBtnGastos").onclick = () => setActiveTab("gastos");
 
     // =========================
     // EVENTS
@@ -2388,6 +2639,26 @@
       }
     });
 
+    // ✅ NOVO: GASTOS EVENTS
+    document.getElementById("frmExpense").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      try{
+        setExpenseError("");
+        const e = collectExpenseForm();
+        expenses.push(e);
+        saveAll();
+        renderAll();
+        clearExpenseForm();
+      }catch(err){
+        setExpenseError(String(err.message || err));
+      }
+    });
+    document.getElementById("e_btnClear").onclick = clearExpenseForm;
+    document.getElementById("e_q").addEventListener("input", renderExpenses);
+    document.getElementById("e_amount").addEventListener("input", () =>
+      updateAmountPreview(document.getElementById("e_amount"), document.getElementById("e_amountPreview"))
+    );
+
     // =========================
     // DIALOG DUP CLOSE
     // =========================
@@ -2409,6 +2680,7 @@
       renderReceipts();
       renderBank();
       renderUsdt();
+      renderExpenses();
     }
 
     // =========================
@@ -2422,6 +2694,7 @@
       clearReceiptForm();
       clearBankForm();
       clearManualForm();
+      clearExpenseForm();
 
       const d = new Date();
       document.getElementById("u_date").value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
